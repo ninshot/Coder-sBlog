@@ -13,6 +13,8 @@ const ChannelDetail = () => {
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyContent, setReplyContent] = useState('');
 
   useEffect(() => {
     fetchChannelDetails();
@@ -50,25 +52,25 @@ const ChannelDetail = () => {
     }
   };
 
-  const handleCreateReply = async (e) => {
-    e.preventDefault();
+  const handleCreateReply = async (messageId) => {
+    if (!replyContent.trim()) return;
+    
     try {
-      const { data } = await createReply(selectedMessage.id, newReply);
+      const { data } = await createReply(messageId, { content: replyContent });
       setMessages(messages.map(msg => 
-        msg.id === selectedMessage.id 
+        msg.id === messageId 
           ? { ...msg, replies: [...(msg.replies || []), data] }
           : msg
       ));
-      setIsReplyModalOpen(false);
-      setNewReply({ content: '' });
+      setReplyContent('');
+      setReplyingTo(null);
     } catch (error) {
       console.error('Error creating reply:', error);
     }
   };
 
   const handleReplyClick = (message) => {
-    setSelectedMessage(message);
-    setIsReplyModalOpen(true);
+    setReplyingTo(message.id);
   };
 
   if (!channel) {
@@ -112,12 +114,61 @@ const ChannelDetail = () => {
             </div>
             <div className="message-content">
               {message.content}
+              {message.image_url && (
+                <div className="message-image">
+                  <img src={message.image_url} alt="Message attachment" />
+                </div>
+              )}
             </div>
             <div className="message-actions">
-              <button className="reply-btn">
+              <button 
+                className="reply-btn"
+                onClick={() => handleReplyClick(message)}
+              >
                 Reply
               </button>
             </div>
+            
+            {replyingTo === message.id && (
+              <div className="reply-section">
+                <textarea
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                  placeholder="Write your reply..."
+                  className="reply-textarea"
+                />
+                <div className="reply-actions">
+                  <button 
+                    className="cancel-reply-btn"
+                    onClick={() => {
+                      setReplyingTo(null);
+                      setReplyContent('');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    className="submit-reply-btn"
+                    onClick={() => handleCreateReply(message.id)}
+                  >
+                    Submit
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {message.replies && message.replies.length > 0 && (
+              <div className="replies-section">
+                {message.replies.map((reply) => (
+                  <div key={reply.id} className="reply-card">
+                    <div className="reply-content">{reply.content}</div>
+                    <div className="reply-meta">
+                      {new Date(reply.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
