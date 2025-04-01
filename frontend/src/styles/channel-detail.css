@@ -1,0 +1,196 @@
+.channel-detail {
+  padding: 40px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.channel-header {
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.channel-title {
+  font-size: 2.5rem;
+  color: #6A0DAD;
+  margin-bottom: 10px;
+}
+
+.channel-description {
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.create-message-btn {
+  background-color: #6A0DAD;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.create-message-btn:hover {
+  background-color: #5500A3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(106, 13, 173, 0.3);
+}
+
+.messages-section {
+  margin-top: 40px;
+}
+
+.section-title {
+  font-size: 1.8rem;
+  color: #6A0DAD;
+  margin-bottom: 20px;
+}
+
+.messages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.message-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(106, 13, 173, 0.1);
+  border: 1px solid rgba(106, 13, 173, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.message-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(106, 13, 173, 0.2);
+  border-color: rgba(106, 13, 173, 0.3);
+  background: linear-gradient(to right, #FFFFFF, #f8f0ff);
+}
+
+.message-title {
+  font-size: 1.2rem;
+  color: #6A0DAD;
+  margin-bottom: 10px;
+}
+
+.message-content {
+  color: #333;
+  line-height: 1.5;
+  margin-bottom: 15px;
+}
+
+.message-meta {
+  display: flex;
+  justify-content: space-between;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 12px rgba(106, 13, 173, 0.2);
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  color: #6A0DAD;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid rgba(106, 13, 173, 0.2);
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #6A0DAD;
+}
+
+.form-group textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.cancel-btn {
+  background-color: #6c757d;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.cancel-btn:hover {
+  background-color: #5a6268;
+}
+
+.create-btn {
+  background-color: #6A0DAD;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.create-btn:hover {
+  background-color: #5500A3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(106, 13, 173, 0.3);
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 1.2rem;
+  color: #6A0DAD;
+} 

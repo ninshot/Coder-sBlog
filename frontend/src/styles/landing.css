@@ -1,0 +1,137 @@
+* {
+  box-sizing: border-box;
+  padding: 0;
+}
+
+.landing-page {
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  padding: 40px;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.title {
+  padding-top: 20px;
+  font-size: clamp(2rem, 5vw, 3rem);
+  color: #6A0DAD;
+  text-align: center;
+  margin-bottom: 20px;
+  caret-color: transparent;
+}
+
+.subtitle {
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  color: #666;
+  text-align: center;
+  margin-bottom: 40px;
+  caret-color: transparent;
+}
+
+.features-section {
+  padding: 40px 0;
+  position: relative;
+}
+
+.section-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  color: #6A0DAD;
+  text-align: center;
+  margin-bottom: 30px;
+  caret-color: transparent;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 30px;
+  margin: 0 auto;
+}
+
+.feature-card {
+  background: white;
+  border-radius: 8px;
+  padding: clamp(20px, 3vw, 30px);
+  box-shadow: 0 2px 4px rgba(106, 13, 173, 0.1);
+  border: 1px solid rgba(106, 13, 173, 0.1);
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(106, 13, 173, 0.2);
+  border-color: rgba(106, 13, 173, 0.3);
+  background: linear-gradient(to right, #FFFFFF, #f8f0ff);
+}
+
+.feature-card h3 {
+  color: #6A0DAD;
+  margin-bottom: 15px;
+  caret-color: transparent;
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+}
+
+.feature-card p {
+  color: #666;
+  line-height: 1.6;
+  caret-color: transparent;
+  font-size: clamp(0.9rem, 1.5vw, 1rem);
+}
+
+.cta-section {
+  padding: 60px 0;
+  text-align: center;
+  position: relative;
+}
+
+.cta-text {
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  color: #666;
+  margin-bottom: 30px;
+  caret-color: transparent;
+  margin: 0 auto 30px;
+}
+
+.landing-btn {
+  display: inline-block;
+  padding: clamp(10px, 2vw, 12px) clamp(20px, 4vw, 30px);
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  caret-color: transparent;
+  background-color: white;
+  color: #6A0DAD;
+  border: 2px solid #6A0DAD;
+  font-size: clamp(0.9rem, 1.5vw, 1rem);
+}
+
+.landing-btn:hover {
+  background-color: #6A0DAD;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(106, 13, 173, 0.3);
+}
+
+.features-list {
+  list-style: none;
+  padding: 0;
+  margin: 20px auto;
+  text-align: center;
+}
+
+.features-list li {
+  margin: 10px 0;
+  font-size: clamp(1rem, 1.5vw, 1.1rem);
+  text-align: center;
+}
+
+
+
+
