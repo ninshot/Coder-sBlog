@@ -8,4 +8,3 @@ CREATE TABLE IF NOT EXISTS messages (
   FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
 );
 
-// ... rest of the schema ... 

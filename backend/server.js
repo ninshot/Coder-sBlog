@@ -3,16 +3,50 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
 const mysql = require('mysql2');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 
+// Configure multer for image uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = 'uploads';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir);
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    const filetypes = /jpeg|jpg|png|gif/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('Only image files are allowed!'));
+  }
+});
+
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use('/uploads', express.static('uploads'));
 
 // Database connection configuration
 const dbConfig = {
@@ -65,6 +99,7 @@ function createTables(connection) {
         channel_id INT,
         title VARCHAR(255) NOT NULL,
         content TEXT NOT NULL,
+        image_url VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
       )
@@ -167,14 +202,20 @@ app.get('/api/channels/:id', (req, res) => {
 
 // Message Routes (Programming Questions)
 // Create a new message in a channel
-app.post('/api/channels/:channelId/messages', async (req, res) => {
+app.post('/api/channels/:channelId/messages', upload.single('image'), async (req, res) => {
   const { channelId } = req.params;
   const { title, content } = req.body;
-  const query = 'INSERT INTO messages (channel_id, title, content) VALUES (?, ?, ?)';
+  let imageUrl = null;
+
+  if (req.file) {
+    imageUrl = `/uploads/${req.file.filename}`;
+  }
+
+  const query = 'INSERT INTO messages (channel_id, title, content, image_url) VALUES (?, ?, ?, ?)';
   
   try {
     const connection = await createConnection();
-    connection.query(query, [channelId, title, content], async (err, results) => {
+    connection.query(query, [channelId, title, content, imageUrl], async (err, results) => {
       if (err) {
         connection.end();
         res.status(500).json({ error: err.message });
@@ -183,7 +224,7 @@ app.post('/api/channels/:channelId/messages', async (req, res) => {
 
       // Get the newly created message with formatted timestamp
       const getMessageQuery = `
-        SELECT id, channel_id, title, content, 
+        SELECT id, channel_id, title, content, image_url,
                DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at
         FROM messages 
         WHERE id = ?
