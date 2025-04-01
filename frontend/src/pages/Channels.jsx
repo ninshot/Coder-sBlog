@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getChannels, createChannel, getMessagesByChannel, createMessage } from '../services/api';
-import '../styles/channels.css';
+import '../styles/Channels.css';
 
 const Channels = () => {
   const [channels, setChannels] = useState([]);
@@ -63,8 +63,8 @@ const Channels = () => {
         member_count: 1 // Initial member count is 1 (the creator)
       };
       setChannels([...channels, newChannelWithCounts]);
-      setIsModalOpen(false);
       setNewChannel({ name: '', description: '' });
+      setIsModalOpen(false);
     } catch (error) {
       console.error('Error creating channel:', error);
     }
@@ -181,7 +181,7 @@ const Channels = () => {
                 Cancel
               </button>
               <button type="submit" className="create-btn">
-                Create Channel
+                Create
               </button>
             </div>
           </form>

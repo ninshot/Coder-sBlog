@@ -192,7 +192,7 @@ const ChannelDetail = () => {
       {/* Message Modal */}
       <div className={`modal-overlay ${isMessageModalOpen ? 'active' : ''}`}>
         <div className="modal-content">
-          <h2 className="modal-title">Create New Message</h2>
+          <h2 className="modal-title">New Message</h2>
           <form className="message-form" onSubmit={handleCreateMessage}>
             <div className="form-group">
               <label htmlFor="title">Title</label>
@@ -218,7 +218,7 @@ const ChannelDetail = () => {
                 Cancel
               </button>
               <button type="submit" className="create-btn">
-                Create Message
+                Send
               </button>
             </div>
           </form>

@@ -1,7 +1,7 @@
 .channels-page {
   min-height: 100vh;
   width: 100vw;
-  background-color: white;
+  background-color: rgb(242, 242, 242);
   display: flex;
   flex-direction: column;
 }
@@ -68,7 +68,7 @@
   max-height: calc(100vh - 150px);
 }
 
-/* Custom scrollbar styles */
+
 .channels-content::-webkit-scrollbar {
   width: 8px;
 }
@@ -104,7 +104,7 @@
   cursor: pointer;
   transition: transform 0.2s ease;
   border: 1px solid black;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -112,7 +112,7 @@
 
 .channel-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 2px 8px 8px rgba(0, 0, 0, 0.1);
 }
 
 .channel-name {
@@ -234,8 +234,9 @@
 }
 
 .create-btn:hover {
-  background-color: #333;
-  transform: translateY(-2px);
+  background-color: white;
+  color: black;
+  border: 1px solid #4CAF50;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
