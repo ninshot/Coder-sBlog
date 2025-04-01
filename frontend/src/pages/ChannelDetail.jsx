@@ -42,7 +42,7 @@ const ChannelDetail = () => {
     e.preventDefault();
     try {
       const { data } = await createMessage(channelId, newMessage);
-      setMessages([data, ...messages]);
+      setMessages([...messages, data]);
       setIsMessageModalOpen(false);
       setNewMessage({ title: '', content: '' });
     } catch (error) {
@@ -122,49 +122,41 @@ const ChannelDetail = () => {
         ))}
       </div>
 
-      {/* New Message Modal */}
-      {isMessageModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsMessageModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">Create New Message</h2>
-            <form onSubmit={handleCreateMessage} className="message-form">
-              <div className="form-group">
-                <label htmlFor="messageTitle">Title</label>
-                <input
-                  type="text"
-                  id="messageTitle"
-                  value={newMessage.title}
-                  onChange={(e) => setNewMessage({ ...newMessage, title: e.target.value })}
-                  placeholder="Enter message title"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="messageContent">Content</label>
-                <textarea
-                  id="messageContent"
-                  value={newMessage.content}
-                  onChange={(e) => setNewMessage({ ...newMessage, content: e.target.value })}
-                  placeholder="Enter message content"
-                  required
-                />
-              </div>
-              <div className="modal-actions">
-                <button 
-                  type="button" 
-                  className="cancel-btn"
-                  onClick={() => setIsMessageModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="create-btn">
-                  Create
-                </button>
-              </div>
-            </form>
-          </div>
+      {/* Message Modal */}
+      <div className={`modal-overlay ${isMessageModalOpen ? 'active' : ''}`}>
+        <div className="modal-content">
+          <h2 className="modal-title">Create New Message</h2>
+          <form className="message-form" onSubmit={handleCreateMessage}>
+            <div className="form-group">
+              <label htmlFor="title">Title</label>
+              <input
+                type="text"
+                id="title"
+                value={newMessage.title}
+                onChange={(e) => setNewMessage({ ...newMessage, title: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="content">Content</label>
+              <textarea
+                id="content"
+                value={newMessage.content}
+                onChange={(e) => setNewMessage({ ...newMessage, content: e.target.value })}
+                required
+              />
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="cancel-btn" onClick={() => setIsMessageModalOpen(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="create-btn">
+                Create Message
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
 
       {/* Reply Modal */}
       {isReplyModalOpen && (

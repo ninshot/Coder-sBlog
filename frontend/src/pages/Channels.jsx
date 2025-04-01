@@ -152,49 +152,41 @@ const Channels = () => {
         )}
       </div>
 
-      {/* Channel Creation Modal */}
-      {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">Create New Channel</h2>
-            <form onSubmit={handleCreateChannel} className="channel-form">
-              <div className="form-group">
-                <label htmlFor="channelName">Name</label>
-                <input
-                  type="text"
-                  id="channelName"
-                  value={newChannel.name}
-                  onChange={(e) => setNewChannel({ ...newChannel, name: e.target.value })}
-                  placeholder="Enter channel name"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="channelDescription">Description</label>
-                <textarea
-                  id="channelDescription"
-                  value={newChannel.description}
-                  onChange={(e) => setNewChannel({ ...newChannel, description: e.target.value })}
-                  placeholder="Enter channel description"
-                  required
-                />
-              </div>
-              <div className="modal-actions">
-                <button 
-                  type="button" 
-                  className="cancel-btn"
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="create-btn">
-                  Create
-                </button>
-              </div>
-            </form>
-          </div>
+      {/* New Channel Modal */}
+      <div className={`modal-overlay ${isModalOpen ? 'active' : ''}`}>
+        <div className="modal-content">
+          <h2 className="modal-title">Create New Channel</h2>
+          <form className="channel-form" onSubmit={handleCreateChannel}>
+            <div className="form-group">
+              <label htmlFor="name">Channel Name</label>
+              <input
+                type="text"
+                id="name"
+                value={newChannel.name}
+                onChange={(e) => setNewChannel({ ...newChannel, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="description">Description</label>
+              <textarea
+                id="description"
+                value={newChannel.description}
+                onChange={(e) => setNewChannel({ ...newChannel, description: e.target.value })}
+                required
+              />
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="cancel-btn" onClick={() => setIsModalOpen(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="create-btn">
+                Create Channel
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
 
       {/* Message Creation Modal */}
       {isMessageModalOpen && (
