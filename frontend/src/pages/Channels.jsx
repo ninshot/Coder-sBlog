@@ -62,8 +62,12 @@ const Channels = () => {
               className="channel-card"
               onClick={() => handleChannelClick(channel.id)}
             >
-              <h2 className="channel-name">{channel.name}</h2>
-              <p className="channel-description">{channel.description}</p>
+              <div className="channel-name-div">
+                <h2 className="channel-name">{channel.name}</h2>
+              </div>
+              <div className="channel-description-div">
+                <p className="channel-description">{channel.description}</p>
+              </div>
             </div>
           ))}
         </div>

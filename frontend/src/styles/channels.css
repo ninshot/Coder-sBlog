@@ -59,20 +59,47 @@
 }
 
 .channels-grid {
-  display:flex;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  display:inline-flex;
+  flex-wrap: wrap;
   gap: 30px;
   padding: 50px 50px;
+  width: 100%;
+  max-height: calc(100vh - 200px);
+  overflow-y:auto;
+}
+
+.channels-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.channels-grid::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.channels-grid::-webkit-scrollbar-thumb {
+  background: #6A0DAD;
+  border-radius: 4px;
+}
+
+.channels-grid::-webkit-scrollbar-thumb:hover {
+  background: #5a0b93;
 }
 
 .channel-card {
   background: white;
   border-radius: 8px;
+  padding: 25px;
   box-shadow: 0 2px 4px rgba(106, 13, 173, 0.1);
   border: 1px solid rgba(106, 13, 173, 0.1);
   transition: all 0.3s ease;
-  width: 300px;
   cursor: pointer;
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  width: 300px;
+  height: 120px;
+  flex-shrink: 0;
 }
 
 .channel-card:hover {
@@ -82,15 +109,41 @@
   background: linear-gradient(to right, #FFFFFF, #f8f0ff);
 }
 
+.channel-name-div {
+  width: 120px;
+  flex-shrink: 0;
+  border-right: 1px solid rgba(106, 13, 173, 0.1);
+  padding-right: 15px;
+  display: flex;
+  align-items: center;
+}
+
 .channel-name {
   color: #6A0DAD;
-  font-size: 1.5rem;
-  margin-bottom: 10px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0;
+  word-break: break-word;
+}
+
+.channel-description-div {
+  flex-grow: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
 }
 
 .channel-description {
   color: #666;
   line-height: 1.6;
+  font-size: 0.95rem;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
 }
 
 .modal-overlay {
@@ -141,6 +194,7 @@
   font-size: 1rem;
   transition: border-color 0.3s ease;
   background-color: #f8f0ff;
+  caret-color: #6A0DAD;
 }
 
 .channel-form input:focus,
@@ -193,9 +247,9 @@
   box-shadow: 0 4px 12px rgba(106, 13, 173, 0.3);
 }
 
-/* Channel Selection Styles */
+
 .channel-list {
-  width: 250px;
+  width: 100%;
   background: white;
   border-right: 1px solid rgba(106, 13, 173, 0.1);
   height: calc(100vh - 80px);
@@ -203,6 +257,7 @@
 }
 
 .channel-item {
+  align-items: center;
   padding: 12px 20px;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -218,7 +273,7 @@
   border-left-color: #6A0DAD;
 }
 
-/* Message Display Area */
+
 .messages-container {
   flex: 1;
   display: flex;
