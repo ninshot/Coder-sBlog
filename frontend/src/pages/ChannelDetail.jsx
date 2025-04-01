@@ -57,11 +57,27 @@ const ChannelDetail = () => {
     
     try {
       const { data } = await createReply(messageId, { content: replyContent });
-      setMessages(messages.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, replies: [...(msg.replies || []), data] }
-          : msg
-      ));
+      console.log('Reply data received:', data);
+      
+      // Update messages state with the new reply
+      setMessages(messages.map(msg => {
+        if (msg.id === messageId) {
+          console.log('Current message:', msg);
+          console.log('Current replies:', msg.replies);
+          const updatedReplies = [...(msg.replies || []), {
+            id: data.id,
+            content: data.content,
+            created_at: data.created_at
+          }];
+          console.log('Updated replies:', updatedReplies);
+          return {
+            ...msg,
+            replies: updatedReplies
+          };
+        }
+        return msg;
+      }));
+      
       setReplyContent('');
       setReplyingTo(null);
     } catch (error) {
@@ -108,8 +124,8 @@ const ChannelDetail = () => {
           <div key={message.id} className="message-card">
             <div className="message-header">
               <h3 className="message-title">{message.title}</h3>
-              <span className="message-meta">
-                {new Date(message.created_at).toLocaleDateString()}
+              <span className="message-date">
+                {new Date(message.created_at).toLocaleString()}
               </span>
             </div>
             <div className="message-content">
@@ -163,7 +179,7 @@ const ChannelDetail = () => {
                   <div key={reply.id} className="reply-card">
                     <div className="reply-content">{reply.content}</div>
                     <div className="reply-meta">
-                      {new Date(reply.created_at).toLocaleDateString()}
+                      {new Date(reply.created_at).toLocaleString()}
                     </div>
                   </div>
                 ))}

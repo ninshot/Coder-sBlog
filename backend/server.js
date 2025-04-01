@@ -33,7 +33,6 @@ function createConnection() {
         reject(err);
         return;
       }
-      console.log('Connected to MySQL database');
       resolve(connection);
     });
   });
@@ -168,44 +167,91 @@ app.get('/api/channels/:id', (req, res) => {
 
 // Message Routes (Programming Questions)
 // Create a new message in a channel
-app.post('/api/channels/:channelId/messages', (req, res) => {
+app.post('/api/channels/:channelId/messages', async (req, res) => {
   const { channelId } = req.params;
   const { title, content } = req.body;
   const query = 'INSERT INTO messages (channel_id, title, content) VALUES (?, ?, ?)';
   
-  db.query(query, [channelId, title, content], (err, results) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.status(201).json({ 
-      id: results.insertId, 
-      channel_id: channelId, 
-      title, 
-      content,
-      message: 'Question posted successfully' 
+  try {
+    const connection = await createConnection();
+    connection.query(query, [channelId, title, content], async (err, results) => {
+      if (err) {
+        connection.end();
+        res.status(500).json({ error: err.message });
+        return;
+      }
+
+      // Get the newly created message with formatted timestamp
+      const getMessageQuery = `
+        SELECT id, channel_id, title, content, 
+               DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at
+        FROM messages 
+        WHERE id = ?
+      `;
+      
+      connection.query(getMessageQuery, [results.insertId], (err, messageResults) => {
+        connection.end();
+        if (err) {
+          res.status(500).json({ error: err.message });
+          return;
+        }
+        
+        res.status(201).json(messageResults[0]);
+      });
     });
-  });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Failed to create message' });
+  }
 });
 
 // Get all messages in a channel
-app.get('/api/channels/:channelId/messages', (req, res) => {
+app.get('/api/channels/:channelId/messages', async (req, res) => {
   const { channelId } = req.params;
   const query = `
     SELECT m.*, 
-           (SELECT COUNT(*) FROM replies WHERE message_id = m.id) as reply_count 
+           DATE_FORMAT(m.created_at, '%Y-%m-%d %H:%i:%s') as created_at,
+           COALESCE(
+             (
+               SELECT JSON_ARRAYAGG(
+                 JSON_OBJECT(
+                   'id', r.id,
+                   'content', r.content,
+                   'created_at', DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s')
+                 )
+               )
+               FROM replies r
+               WHERE r.message_id = m.id
+             ),
+             JSON_ARRAY()
+           ) as replies
     FROM messages m 
     WHERE m.channel_id = ? 
     ORDER BY m.created_at DESC
   `;
   
-  db.query(query, [channelId], (err, results) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.json(results);
-  });
+  try {
+    const connection = await createConnection();
+    connection.query(query, [channelId], (err, results) => {
+      connection.end();
+      if (err) {
+        console.error('Error fetching messages:', err);
+        res.status(500).json({ error: err.message });
+        return;
+      }
+      
+      // The replies are already parsed by mysql2
+      const messages = results.map(message => ({
+        ...message,
+        replies: message.replies || []
+      }));
+      
+      res.json(messages);
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
 });
 
 // Get a specific message with its replies
@@ -233,23 +279,42 @@ app.get('/api/messages/:messageId', (req, res) => {
 
 // Reply Routes (Answers/Responses)
 // Create a reply to a message
-app.post('/api/messages/:messageId/replies', (req, res) => {
+app.post('/api/messages/:messageId/replies', async (req, res) => {
   const { messageId } = req.params;
   const { content } = req.body;
   const query = 'INSERT INTO replies (message_id, content) VALUES (?, ?)';
   
-  db.query(query, [messageId, content], (err, results) => {
-    if (err) {
-      res.status(500).json({ error: err.message });
-      return;
-    }
-    res.status(201).json({ 
-      id: results.insertId, 
-      message_id: messageId, 
-      content,
-      message: 'Reply posted successfully' 
+  try {
+    const connection = await createConnection();
+    connection.query(query, [messageId, content], async (err, results) => {
+      if (err) {
+        connection.end();
+        res.status(500).json({ error: err.message });
+        return;
+      }
+
+      // Get the newly created reply with formatted timestamp
+      const getReplyQuery = `
+        SELECT id, message_id, content, 
+               DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at
+        FROM replies 
+        WHERE id = ?
+      `;
+      
+      connection.query(getReplyQuery, [results.insertId], (err, replyResults) => {
+        connection.end();
+        if (err) {
+          res.status(500).json({ error: err.message });
+          return;
+        }
+        
+        res.status(201).json(replyResults[0]);
+      });
     });
-  });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Failed to create reply' });
+  }
 });
 
 // Get all replies for a message
