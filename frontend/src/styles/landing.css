@@ -5,9 +5,12 @@
 
 .landing-page {
   min-height: 100vh;
-  width: 100%;
+  margin : 0;
+  width: 100vw;
   overflow-x: hidden;
   padding: 40px;
+  background-color: white;
+  caret-color: transparent;
 }
 
 .container {
@@ -19,18 +22,17 @@
 .title {
   padding-top: 20px;
   font-size: clamp(2rem, 5vw, 3rem);
-  color: #6A0DAD;
+  color: black !important;
   text-align: center;
   margin-bottom: 20px;
-  caret-color: transparent;
+  font-weight: 600;
 }
 
 .subtitle {
   font-size: clamp(1rem, 2vw, 1.2rem);
   color: #666;
   text-align: center;
-  margin-bottom: 40px;
-  caret-color: transparent;
+  margin-bottom: 30px;
 }
 
 .features-section {
@@ -40,10 +42,9 @@
 
 .section-title {
   font-size: clamp(1.5rem, 3vw, 2rem);
-  color: #6A0DAD;
+  color: black;
   text-align: center;
   margin-bottom: 30px;
-  caret-color: transparent;
 }
 
 .features-grid {
@@ -57,30 +58,28 @@
   background: white;
   border-radius: 8px;
   padding: clamp(20px, 3vw, 30px);
-  box-shadow: 0 2px 4px rgba(106, 13, 173, 0.1);
-  border: 1px solid rgba(106, 13, 173, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   text-align: center;
 }
 
 .feature-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 4px 12px rgba(106, 13, 173, 0.2);
-  border-color: rgba(106, 13, 173, 0.3);
-  background: linear-gradient(to right, #FFFFFF, #f8f0ff);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-color: rgba(0, 0, 0, 0.3);
+  background: linear-gradient(to right, #FFFFFF, #f5f5f5);
 }
 
 .feature-card h3 {
-  color: #6A0DAD;
+  color: black;
   margin-bottom: 15px;
-  caret-color: transparent;
   font-size: clamp(1.2rem, 2vw, 1.5rem);
 }
 
 .feature-card p {
   color: #666;
   line-height: 1.6;
-  caret-color: transparent;
   font-size: clamp(0.9rem, 1.5vw, 1rem);
 }
 
@@ -93,9 +92,8 @@
 .cta-text {
   font-size: clamp(1rem, 2vw, 1.2rem);
   color: #666;
-  margin-bottom: 30px;
-  caret-color: transparent;
   margin: 0 auto 30px;
+  max-width: 600px;
 }
 
 .landing-btn {
@@ -105,18 +103,18 @@
   text-decoration: none;
   font-weight: 500;
   transition: all 0.3s ease;
-  caret-color: transparent;
   background-color: white;
-  color: #6A0DAD;
-  border: 2px solid #6A0DAD;
+  color: black;
+  border: 2px solid black;
   font-size: clamp(0.9rem, 1.5vw, 1rem);
 }
 
 .landing-btn:hover {
-  background-color: #6A0DAD;
-  color: white;
+  background-color: white;
+  color: black;
+  border: 2px solid black;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(106, 13, 173, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .features-list {
@@ -130,6 +128,22 @@
   margin: 10px 0;
   font-size: clamp(1rem, 1.5vw, 1.1rem);
   text-align: center;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .landing-page {
+    padding: 20px;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+    padding: 0 20px;
+  }
+
+  .feature-card {
+    padding: 20px;
+  }
 }
 
 
