@@ -113,48 +113,77 @@ const ChannelDetail = () => {
   const handleCreateMessage = async (e) => {
     e.preventDefault();
     try {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user'));
+      
+      if (!token || !user) {
+        throw new Error('Not authenticated');
+      }
+
       const formData = new FormData();
       formData.append('title', newMessage.title);
       formData.append('content', newMessage.content);
+      formData.append('user_id', user.id);
+      formData.append('displayName', user.displayName);
       
       if (newMessage.image) {
         formData.append('image', newMessage.image);
-        console.log('Sending message image:', newMessage.image);
-        console.log('Image size:', newMessage.image.size);
-        console.log('Image type:', newMessage.image.type);
       }
-      
-      console.log('FormData entries:');
-      for (let pair of formData.entries()) {
-        console.log(pair[0] + ': ' + pair[1]);
+
+      const response = await fetch(`http://localhost:8000/api/channels/${channelId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create message');
       }
-      
-      setIsMessageModalOpen(false);
-      const response = await createMessage(channelId, formData);
-      console.log('Message creation response:', response);
+
+      const data = await response.json();
+      console.log('Message created:', data);
       
       // Reset form
       setNewMessage({ title: '', content: '', image: null });
       setMessageImagePreview(null);
+      setIsMessageModalOpen(false);
       
       // Refresh messages
       fetchMessages();
     } catch (error) {
       console.error('Error creating message:', error);
-      setError('Failed to create message. Please try again.');
+      setError(error.message);
     }
   };
 
   const handleCreateReply = async (messageId) => {
     try {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user'));
+      
+      console.log('User data from localStorage:', user); // Debug log
+      
+      if (!token || !user) {
+        throw new Error('Not authenticated');
+      }
+
       const formData = new FormData();
       formData.append('content', newReply.content);
+      formData.append('user_id', user.id);
+      formData.append('displayName', user.displayName);
+      
+      console.log('FormData entries:'); // Debug log
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+      }
       
       if (newReply.image) {
         formData.append('image', newReply.image);
       }
 
-      const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:8000/api/messages/${messageId}/replies`, {
         method: 'POST',
         headers: {
@@ -164,11 +193,12 @@ const ChannelDetail = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create reply');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create reply');
       }
 
       const data = await response.json();
-      console.log('Reply created:', data);
+      console.log('Reply created with data:', data); // Debug log
       
       // Reset reply form
       setNewReply({ content: '', image: null });
@@ -224,7 +254,7 @@ const ChannelDetail = () => {
             <div className="message-header">
               <div className="message-user-info">
                 <div className="message-user-details">
-                  <span className="message-username" style={{ fontWeight: 'bold' }}>Admin</span>
+                  <span className="message-username" style={{ fontWeight: 'bold' }}>{message.displayName || 'Anonymous'}</span>
                   <h3 className="message-title">{message.title}</h3>
                 </div>
                 <span className="message-date">
@@ -310,7 +340,7 @@ const ChannelDetail = () => {
                   <div key={reply.id} className="reply-card">
                     <div className="reply-user-info">
                       <div className="reply-user-details">
-                        <span className="reply-username" style={{ fontWeight: 'bold' }}>Admin</span>
+                        <span className="reply-username" style={{ fontWeight: 'bold' }}>{reply.displayName || 'Anonymous'}</span>
                         <div className="reply-content">{reply.content}</div>
                       </div>
                       <span className="reply-date">

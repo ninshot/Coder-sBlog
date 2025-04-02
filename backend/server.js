@@ -118,11 +118,14 @@ function createTables(connection) {
       CREATE TABLE IF NOT EXISTS messages (
         id INT AUTO_INCREMENT PRIMARY KEY,
         channel_id INT,
+        user_id INT,
+        displayName VARCHAR(255),
         title VARCHAR(255) NOT NULL,
         content TEXT NOT NULL,
         image_url VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE
+        FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `, (err) => {
       if (err) {
@@ -138,10 +141,13 @@ function createTables(connection) {
       CREATE TABLE IF NOT EXISTS replies (
         id INT AUTO_INCREMENT PRIMARY KEY,
         message_id INT,
+        user_id INT,
+        displayName VARCHAR(255),
         content TEXT NOT NULL,
         image_url VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+        FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `, (err) => {
       if (err) {
@@ -319,13 +325,15 @@ app.get('/api/channels/:id', (req, res) => {
 // Create a new message in a channel
 app.post('/api/channels/:channelId/messages', authenticateToken, upload.single('image'), (req, res) => {
   const { channelId } = req.params;
-  const { title, content } = req.body;
+  const { title, content, user_id, displayName } = req.body;
   let imageUrl = null;
 
   console.log('Received message creation request:', {
     channelId,
     title,
     content,
+    user_id,
+    displayName,
     hasFile: !!req.file,
     fileDetails: req.file
   });
@@ -341,9 +349,9 @@ app.post('/api/channels/:channelId/messages', authenticateToken, upload.single('
     });
   }
 
-  const query = 'INSERT INTO messages (channel_id, title, content, image_url) VALUES (?, ?, ?, ?)';
+  const query = 'INSERT INTO messages (channel_id, user_id, displayName, title, content, image_url) VALUES (?, ?, ?, ?, ?, ?)';
   
-  db.query(query, [channelId, title, content, imageUrl], (err, results) => {
+  db.query(query, [channelId, user_id, displayName, title, content, imageUrl], (err, results) => {
     if (err) {
       console.error('Error creating message:', err);
       res.status(500).json({ error: err.message });
@@ -352,7 +360,7 @@ app.post('/api/channels/:channelId/messages', authenticateToken, upload.single('
 
     // Get the newly created message with formatted timestamp
     const getMessageQuery = `
-      SELECT id, channel_id, title, content, image_url,
+      SELECT id, channel_id, user_id, displayName, title, content, image_url,
              DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at
       FROM messages 
       WHERE id = ?
@@ -382,6 +390,8 @@ app.get('/api/channels/:channelId/messages', async (req, res) => {
                SELECT JSON_ARRAYAGG(
                  JSON_OBJECT(
                    'id', r.id,
+                   'user_id', r.user_id,
+                   'displayName', r.displayName,
                    'content', r.content,
                    'image_url', r.image_url,
                    'created_at', DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s')
@@ -448,12 +458,14 @@ app.get('/api/messages/:messageId', (req, res) => {
 // Create a reply to a message
 app.post('/api/messages/:messageId/replies', authenticateToken, upload.single('image'), (req, res) => {
   const { messageId } = req.params;
-  const { content } = req.body;
+  const { content, user_id, displayName } = req.body;
   let imageUrl = null;
 
   console.log('Received reply creation request:', {
     messageId,
     content,
+    user_id,
+    displayName,
     hasFile: !!req.file,
     fileDetails: req.file
   });
@@ -469,9 +481,9 @@ app.post('/api/messages/:messageId/replies', authenticateToken, upload.single('i
     });
   }
 
-  const query = 'INSERT INTO replies (message_id, content, image_url) VALUES (?, ?, ?)';
+  const query = 'INSERT INTO replies (message_id, user_id, displayName, content, image_url) VALUES (?, ?, ?, ?, ?)';
   
-  db.query(query, [messageId, content, imageUrl], (err, results) => {
+  db.query(query, [messageId, user_id, displayName, content, imageUrl], (err, results) => {
     if (err) {
       console.error('Error creating reply:', err);
       res.status(500).json({ error: err.message });
@@ -480,7 +492,7 @@ app.post('/api/messages/:messageId/replies', authenticateToken, upload.single('i
 
     // Get the newly created reply with formatted timestamp
     const getReplyQuery = `
-      SELECT id, message_id, content, image_url,
+      SELECT id, message_id, user_id, displayName, content, image_url,
              DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at
       FROM replies 
       WHERE id = ?
@@ -503,7 +515,7 @@ app.post('/api/messages/:messageId/replies', authenticateToken, upload.single('i
 app.get('/api/messages/:messageId/replies', (req, res) => {
   const { messageId } = req.params;
   const query = `
-    SELECT id, message_id, content, image_url,
+    SELECT id, message_id, user_id, displayName, content, image_url,
            DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at
     FROM replies 
     WHERE message_id = ? 
@@ -537,14 +549,43 @@ app.post('/api/auth/register', async (req, res) => {
         if (err.code === 'ER_DUP_ENTRY') {
           return res.status(400).json({ message: 'Username already exists' });
         }
+        console.error('Error registering user:', err);
         return res.status(500).json({ error: err.message });
       }
-      res.status(201).json({ 
-        message: 'User registered successfully',
-        userId: results.insertId
+
+      // Get the newly created user
+      const getUserQuery = 'SELECT id, username, displayName, isAdmin FROM users WHERE id = ?';
+      db.query(getUserQuery, [results.insertId], (err, userResults) => {
+        if (err) {
+          console.error('Error fetching created user:', err);
+          return res.status(500).json({ error: err.message });
+        }
+
+        const user = userResults[0];
+        const token = jwt.sign(
+          { 
+            id: user.id, 
+            username: user.username, 
+            displayName: user.displayName,
+            isAdmin: user.isAdmin 
+          },
+          JWT_SECRET,
+          { expiresIn: '24h' }
+        );
+
+        res.status(201).json({ 
+          token,
+          user: {
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName,
+            isAdmin: user.isAdmin
+          }
+        });
       });
     });
   } catch (error) {
+    console.error('Error in registration:', error);
     res.status(500).json({ error: error.message });
   }
 });
