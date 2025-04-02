@@ -24,10 +24,12 @@ const ChannelDetail = () => {
   const [messageImagePreview, setMessageImagePreview] = useState(null);
   const [replyImagePreview, setReplyImagePreview] = useState(null);
   const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     fetchChannelDetails();
     fetchMessages();
+    fetchUser();
   }, [channelId]);
 
   const fetchChannelDetails = async () => {
@@ -58,6 +60,17 @@ const ChannelDetail = () => {
       setMessages(data);
     } catch (error) {
       console.error('Error fetching messages:', error);
+      setError(error.message);
+    }
+  };
+
+  const fetchUser = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const userData = JSON.parse(localStorage.getItem('user'));
+      setUser(userData);
+    } catch (error) {
+      console.error('Error fetching user:', error);
       setError(error.message);
     }
   };
@@ -217,6 +230,66 @@ const ChannelDetail = () => {
     setReplyingTo(message.id);
   };
 
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`http://localhost:8000/api/messages/${messageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete message');
+      }
+
+      // Refresh messages
+      fetchMessages();
+      setError(null); // Clear any previous errors
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      setError(error.message);
+      // Show error message for 3 seconds
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  const handleDeleteReply = async (replyId) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`http://localhost:8000/api/replies/${replyId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to delete reply');
+      }
+
+      // Refresh messages
+      fetchMessages();
+      setError(null); // Clear any previous errors
+    } catch (error) {
+      console.error('Error deleting reply:', error);
+      setError(error.message);
+      // Show error message for 3 seconds
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
   if (!channel) {
     return <div className="loading">Loading...</div>;
   }
@@ -257,17 +330,46 @@ const ChannelDetail = () => {
                   <span className="message-username" style={{ fontWeight: 'bold' }}>{message.displayName || 'Anonymous'}</span>
                   <h3 className="message-title">{message.title}</h3>
                 </div>
-                <span className="message-date">
-                  {new Date(message.created_at + 'Z').toLocaleString('en-US', { 
-                    timeZone: 'America/Regina',
-                    hour12: true,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <span className="message-date">
+                    {new Date(message.created_at + 'Z').toLocaleString('en-US', { 
+                      timeZone: 'America/Regina',
+                      hour12: true,
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </span>
+                  {(user?.isAdmin || message.user_id === user?.id) && (
+                    <button 
+                      onClick={() => handleDeleteMessage(message.id)}
+                      style={{
+                        padding: '0.5rem',
+                        background: 'red',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '0.9rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease'
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.background = 'white';
+                        e.currentTarget.style.color = 'red';
+                        e.currentTarget.style.border = '2px solid red';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.background = 'red';
+                        e.currentTarget.style.color = 'white';
+                        e.currentTarget.style.border = 'none';
+                      }}
+                    >
+                      Delete Message
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             <div className="message-content">
@@ -343,17 +445,46 @@ const ChannelDetail = () => {
                         <span className="reply-username" style={{ fontWeight: 'bold' }}>{reply.displayName || 'Anonymous'}</span>
                         <div className="reply-content">{reply.content}</div>
                       </div>
-                      <span className="reply-date">
-                        {new Date(reply.created_at + 'Z').toLocaleString('en-US', { 
-                          timeZone: 'America/Regina',
-                          hour12: true,
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <span className="reply-date">
+                          {new Date(reply.created_at + 'Z').toLocaleString('en-US', { 
+                            timeZone: 'America/Regina',
+                            hour12: true,
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </span>
+                        {(user?.isAdmin || reply.user_id === user?.id) && (
+                          <button 
+                            onClick={() => handleDeleteReply(reply.id)}
+                            style={{
+                              padding: '0.5rem',
+                              background: 'red',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '0.9rem',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease'
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.background = 'white';
+                              e.currentTarget.style.color = 'red';
+                              e.currentTarget.style.border = '2px solid red';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.background = 'red';
+                              e.currentTarget.style.color = 'white';
+                              e.currentTarget.style.border = 'none';
+                            }}
+                          >
+                            Delete Reply
+                          </button>
+                        )}
+                      </div>
                     </div>
                     {reply.image_url && (
                       <div className="reply-image">
