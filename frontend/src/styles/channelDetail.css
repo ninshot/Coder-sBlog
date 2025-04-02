@@ -111,21 +111,35 @@
 }
 
 .message-header {
+  margin-bottom: 1rem;
+}
+
+.message-user-info {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.message-user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.message-username {
+  font-size: 1.1rem;
+  color: #333;
 }
 
 .message-title {
-  color: black;
-  font-size: 1.2rem;
+  font-size: 1rem;
+  color: #666;
   margin: 0;
-  font-weight: 600;
 }
 
-.message-meta {
-  color: #666;
+.message-date {
+  color: #888;
   font-size: 0.9rem;
 }
 
@@ -525,4 +539,42 @@
   object-fit: contain;
   display: block;
   margin: 0 auto;
+}
+
+.reply-card {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  margin-top: 10px;
+  border: 1px solid #ddd;
+}
+
+.reply-user-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.reply-user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.reply-username {
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.reply-content {
+  font-size: 1rem;
+  color: #666;
+  margin: 0;
+}
+
+.reply-date {
+  color: #888;
+  font-size: 0.9rem;
 } 

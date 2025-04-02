@@ -42,11 +42,23 @@ const ChannelDetail = () => {
 
   const fetchMessages = async () => {
     try {
-      const { data } = await getMessagesByChannel(channelId);
-      console.log('Fetched messages:', data);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8000/api/channels/${channelId}/messages`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch messages');
+      }
+
+      const data = await response.json();
+      console.log('Fetched messages data:', data); // Debug log
       setMessages(data);
     } catch (error) {
       console.error('Error fetching messages:', error);
+      setError(error.message);
     }
   };
 
@@ -210,24 +222,28 @@ const ChannelDetail = () => {
         {messages.map((message) => (
           <div key={message.id} className="message-card">
             <div className="message-header">
-              <h3 className="message-title">{message.title}</h3>
-              <span className="message-date">
-                {new Date(message.created_at + 'Z').toLocaleString('en-US', { 
-                  timeZone: 'America/Regina',
-                  hour12: true,
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                })}
-              </span>
+              <div className="message-user-info">
+                <div className="message-user-details">
+                  <span className="message-username" style={{ fontWeight: 'bold' }}>Admin</span>
+                  <h3 className="message-title">{message.title}</h3>
+                </div>
+                <span className="message-date">
+                  {new Date(message.created_at + 'Z').toLocaleString('en-US', { 
+                    timeZone: 'America/Regina',
+                    hour12: true,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </span>
+              </div>
             </div>
             <div className="message-content">
               <p>{message.content}</p>
               {message.image_url && (
                 <div className="message-image">
-                  {console.log('Message Image URL:', message.image_url)}
                   <img src={`http://localhost:8000${message.image_url}`} alt="Message attachment" />
                 </div>
               )}
@@ -292,14 +308,11 @@ const ChannelDetail = () => {
               <div className="replies-section">
                 {message.replies.map((reply) => (
                   <div key={reply.id} className="reply-card">
-                    <div className="reply-content">{reply.content}</div>
-                    {reply.image_url && (
-                      <div className="reply-image">
-                        {console.log('Reply Image URL:', reply.image_url)}
-                        <img src={`http://localhost:8000${reply.image_url}`} alt="Reply attachment" />
+                    <div className="reply-user-info">
+                      <div className="reply-user-details">
+                        <span className="reply-username" style={{ fontWeight: 'bold' }}>Admin</span>
+                        <div className="reply-content">{reply.content}</div>
                       </div>
-                    )}
-                    <div className="reply-meta">
                       <span className="reply-date">
                         {new Date(reply.created_at + 'Z').toLocaleString('en-US', { 
                           timeZone: 'America/Regina',
@@ -312,6 +325,11 @@ const ChannelDetail = () => {
                         })}
                       </span>
                     </div>
+                    {reply.image_url && (
+                      <div className="reply-image">
+                        <img src={`http://localhost:8000${reply.image_url}`} alt="Reply attachment" />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
