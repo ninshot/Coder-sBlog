@@ -175,7 +175,7 @@ const ChannelDetail = () => {
   }
 
   return (
-    <div className="channel-detail-page">
+    <div className="channel-detail-page" style={{ marginTop: '60px' }}>
       <div className="channel-header-bar">
         <div className="header-left">
           <button className="back-btn" onClick={() => navigate('/channels')}>
