@@ -6,11 +6,25 @@ const mysql = require('mysql2');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
+
+// JWT secret key
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+// Admin account credentials
+const ADMIN_USER = {
+  id: 1,
+  username: 'admin',
+  password: 'admin123', // This will be set during initialization
+  displayName: 'System Administrator',
+  isAdmin: true
+};
 
 // Configure multer for image uploads
 const storage = multer.diskStorage({
@@ -57,7 +71,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Database connection configuration
 const dbConfig = {
-  host: process.env.DB_HOST || 'mysql',
+  host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || 'rootpassword',
   database: process.env.DB_NAME || 'coders_blog'
@@ -170,6 +184,41 @@ function createTables(connection) {
         }
       });
     });
+
+    // Create users table
+    connection.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        displayName VARCHAR(255) NOT NULL,
+        isAdmin BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `, (err) => {
+      if (err) {
+        console.error('Error creating users table:', err);
+        reject(err);
+        return;
+      }
+      console.log('Users table created or already exists');
+    });
+
+    // Create admin account if it doesn't exist
+    const salt = bcrypt.genSaltSync(10);
+    const hashedPassword = bcrypt.hashSync('admin123', salt);
+    connection.query(`
+      INSERT IGNORE INTO users (id, username, password, displayName, isAdmin)
+      VALUES (1, 'admin', ?, 'System Administrator', TRUE)
+    `, [hashedPassword], (err) => {
+      if (err) {
+        console.error('Error creating admin account:', err);
+        reject(err);
+        return;
+      }
+      console.log('Admin account created or already exists');
+      resolve();
+    });
   });
 }
 
@@ -189,9 +238,35 @@ async function initializeDatabase() {
 // Start database initialization
 initializeDatabase();
 
+// Authentication middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: 'Invalid token' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// Admin middleware
+const requireAdmin = (req, res, next) => {
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+  next();
+};
+
 // Channel Routes
 // Create a new channel
-app.post('/api/channels', (req, res) => {
+app.post('/api/channels', authenticateToken, (req, res) => {
   const { name, description } = req.body;
   const query = 'INSERT INTO channels (name, description) VALUES (?, ?)';
   
@@ -242,7 +317,7 @@ app.get('/api/channels/:id', (req, res) => {
 
 // Message Routes (Programming Questions)
 // Create a new message in a channel
-app.post('/api/channels/:channelId/messages', upload.single('image'), (req, res) => {
+app.post('/api/channels/:channelId/messages', authenticateToken, upload.single('image'), (req, res) => {
   const { channelId } = req.params;
   const { title, content } = req.body;
   let imageUrl = null;
@@ -371,7 +446,7 @@ app.get('/api/messages/:messageId', (req, res) => {
 
 // Reply Routes (Answers/Responses)
 // Create a reply to a message
-app.post('/api/messages/:messageId/replies', upload.single('image'), (req, res) => {
+app.post('/api/messages/:messageId/replies', authenticateToken, upload.single('image'), (req, res) => {
   const { messageId } = req.params;
   const { content } = req.body;
   let imageUrl = null;
@@ -441,6 +516,167 @@ app.get('/api/messages/:messageId/replies', (req, res) => {
       return;
     }
     res.json(results);
+  });
+});
+
+// User Routes
+// Register a new user
+app.post('/api/auth/register', async (req, res) => {
+  const { username, password, displayName } = req.body;
+
+  if (!username || !password || !displayName) {
+    return res.status(400).json({ message: 'All fields are required' });
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const query = 'INSERT INTO users (username, password, displayName) VALUES (?, ?, ?)';
+    
+    db.query(query, [username, hashedPassword, displayName], (err, results) => {
+      if (err) {
+        if (err.code === 'ER_DUP_ENTRY') {
+          return res.status(400).json({ message: 'Username already exists' });
+        }
+        return res.status(500).json({ error: err.message });
+      }
+      res.status(201).json({ 
+        message: 'User registered successfully',
+        userId: results.insertId
+      });
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Login user
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Username and password are required' });
+  }
+
+  const query = 'SELECT * FROM users WHERE username = ?';
+  
+  db.query(query, [username], async (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    
+    if (results.length === 0) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const user = results[0];
+    const validPassword = await bcrypt.compare(password, user.password);
+
+    if (!validPassword) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign(
+      { 
+        id: user.id, 
+        username: user.username, 
+        displayName: user.displayName,
+        isAdmin: user.isAdmin 
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({ 
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        isAdmin: user.isAdmin
+      }
+    });
+  });
+});
+
+// Admin Routes
+// Get all users (admin only)
+app.get('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
+  const query = 'SELECT id, username, displayName, isAdmin, created_at FROM users';
+  
+  db.query(query, (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(results);
+  });
+});
+
+// Delete a user (admin only)
+app.delete('/api/admin/users/:userId', authenticateToken, requireAdmin, (req, res) => {
+  const { userId } = req.params;
+  
+  if (userId === '1') {
+    return res.status(400).json({ message: 'Cannot delete admin account' });
+  }
+
+  const query = 'DELETE FROM users WHERE id = ?';
+  
+  db.query(query, [userId], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ message: 'User deleted successfully' });
+  });
+});
+
+// Delete a channel (admin only)
+app.delete('/api/admin/channels/:channelId', authenticateToken, requireAdmin, (req, res) => {
+  const { channelId } = req.params;
+  const query = 'DELETE FROM channels WHERE id = ?';
+  
+  db.query(query, [channelId], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: 'Channel not found' });
+    }
+    res.json({ message: 'Channel deleted successfully' });
+  });
+});
+
+// Delete a message (admin only)
+app.delete('/api/admin/messages/:messageId', authenticateToken, requireAdmin, (req, res) => {
+  const { messageId } = req.params;
+  const query = 'DELETE FROM messages WHERE id = ?';
+  
+  db.query(query, [messageId], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+    res.json({ message: 'Message deleted successfully' });
+  });
+});
+
+// Delete a reply (admin only)
+app.delete('/api/admin/replies/:replyId', authenticateToken, requireAdmin, (req, res) => {
+  const { replyId } = req.params;
+  const query = 'DELETE FROM replies WHERE id = ?';
+  
+  db.query(query, [replyId], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: 'Reply not found' });
+    }
+    res.json({ message: 'Reply deleted successfully' });
   });
 });
 

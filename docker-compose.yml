@@ -12,8 +12,8 @@ services:
       - DB_USER=root
       - DB_PASSWORD=rootpassword
       - DB_NAME=coders_blog
+      - JWT_SECRET=your-super-secret-jwt-key-2024-coders-blog
     volumes:
-      - ./backend:/app
       - ./backend/uploads:/app/uploads
     depends_on:
       - mysql
