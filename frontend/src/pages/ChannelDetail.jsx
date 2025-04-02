@@ -74,25 +74,27 @@ const ChannelDetail = () => {
 
       setError(null);
       
-      if (type === 'message') {
-        setNewMessage(prev => ({ ...prev, image: file }));
-        // Create a preview
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setMessageImagePreview(reader.result);
-          console.log('Message image preview set:', reader.result);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        setNewReply(prev => ({ ...prev, image: file }));
-        // Create a preview
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setReplyImagePreview(reader.result);
-          console.log('Reply image preview set:', reader.result);
-        };
-        reader.readAsDataURL(file);
-      }
+      // Create a preview URL
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        console.log('FileReader loaded successfully');
+        if (type === 'message') {
+          setNewMessage(prev => ({ ...prev, image: file }));
+          setMessageImagePreview(event.target.result);
+          console.log('Message preview set:', event.target.result);
+        } else {
+          setNewReply(prev => ({ ...prev, image: file }));
+          setReplyImagePreview(event.target.result);
+          console.log('Reply preview set:', event.target.result);
+        }
+      };
+      
+      reader.onerror = (error) => {
+        console.error('Error reading file:', error);
+        setError('Error reading file. Please try again.');
+      };
+
+      reader.readAsDataURL(file);
     }
   };
 
@@ -338,11 +340,11 @@ const ChannelDetail = () => {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="image" className="file-input-label">
+              <label htmlFor="messageImage" className="file-input-label">
                 Upload Image
                 <input
                   type="file"
-                  id="image"
+                  id="messageImage"
                   name="image"
                   accept="image/*"
                   onChange={(e) => handleImageChange(e, 'message')}
@@ -351,7 +353,11 @@ const ChannelDetail = () => {
               </label>
               {messageImagePreview && (
                 <div className="image-preview">
-                  <img src={messageImagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }} />
+                  <img 
+                    src={messageImagePreview} 
+                    alt="Preview" 
+                    style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }}
+                  />
                 </div>
               )}
             </div>
@@ -407,7 +413,11 @@ const ChannelDetail = () => {
               </label>
               {replyImagePreview && (
                 <div className="image-preview">
-                  <img src={replyImagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }} />
+                  <img 
+                    src={replyImagePreview} 
+                    alt="Preview" 
+                    style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }}
+                  />
                 </div>
               )}
             </div>

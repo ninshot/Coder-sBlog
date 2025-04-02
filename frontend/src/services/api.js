@@ -31,12 +31,22 @@ export const createMessage = (channelId, messageData) => {
 };
 
 
-export const createReply = (messageId, replyData) => {
-  // If replyData is FormData, don't set Content-Type header
-  const headers = replyData instanceof FormData ? {} : {
-    'Content-Type': 'application/json',
-  };
-  return api.post(`/messages/${messageId}/replies`, replyData, { headers });
+export const createReply = async (messageId, formData) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/messages/${messageId}/replies`, formData, {
+      headers: {
+        // Remove Content-Type header to let browser set it with boundary for FormData
+      },
+      transformRequest: [
+        function (data) {
+          return data; // Don't transform FormData
+        }
+      ]
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 };
 
 export default api; 
