@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
+// Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -9,11 +10,18 @@ const api = axios.create({
   },
 });
 
+// Add request interceptor to include auth token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 export const getChannels = () => api.get('/channels');
 export const getChannelById = (id) => api.get(`/channels/${id}`);
 export const createChannel = (channelData) => api.post('/channels', channelData);
-
 
 export const getMessagesByChannel = (channelId) => api.get(`/channels/${channelId}/messages`);
 export const getMessageById = (messageId) => api.get(`/messages/${messageId}`);
@@ -29,7 +37,6 @@ export const createMessage = (channelId, messageData) => {
     }] : undefined
   });
 };
-
 
 export const createReply = async (messageId, formData) => {
   try {

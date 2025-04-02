@@ -38,8 +38,8 @@ function LandingPage() {
         <div className="container">
           <h2 className="section-title">Ready to Start?</h2>
           <p className="cta-text">Join our community and start exploring programming channels today!</p>
-          <Link to="/channels" className="btn btn-primary">
-            Explore Channels
+          <Link to="/register" className="btn btn-primary">
+            Sign Up
           </Link>
         </div>
       </div>
