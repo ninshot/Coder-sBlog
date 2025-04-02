@@ -140,29 +140,34 @@ const ChannelDetail = () => {
       
       if (newReply.image) {
         formData.append('image', newReply.image);
-        console.log('Sending reply image:', newReply.image);
-        console.log('Image size:', newReply.image.size);
-        console.log('Image type:', newReply.image.type);
       }
-      
-      console.log('FormData entries:');
-      for (let pair of formData.entries()) {
-        console.log(pair[0] + ': ' + pair[1]);
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8000/api/messages/${messageId}/replies`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create reply');
       }
+
+      const data = await response.json();
+      console.log('Reply created:', data);
       
-      setIsReplyModalOpen(false);
-      const response = await createReply(messageId, formData);
-      console.log('Reply creation response:', response);
-      
-      // Reset form
+      // Reset reply form
       setNewReply({ content: '', image: null });
       setReplyImagePreview(null);
+      setReplyingTo(null);
       
       // Refresh messages
       fetchMessages();
     } catch (error) {
       console.error('Error creating reply:', error);
-      setError('Failed to create reply. Please try again.');
+      setError(error.message);
     }
   };
 
