@@ -9,8 +9,13 @@ const Channels = () => {
   const [newChannel, setNewChannel] = useState({ name: '', description: '' });
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState({ title: '', content: '' });
+  const [newMessage, setNewMessage] = useState({ 
+    title: '', 
+    content: '',
+    image: null 
+  });
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -52,28 +57,64 @@ const Channels = () => {
     }
   };
 
+  const handleCancel = () => {
+    setIsModalOpen(false);
+    setNewChannel({ name: '', description: '' });
+  };
+
   const handleCreateChannel = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await createChannel(newChannel);
-      // Add initial counts to the new channel
-      const newChannelWithCounts = {
-        ...data,
-        message_count: 0,
-        member_count: 1 // Initial member count is 1 (the creator)
-      };
-      setChannels([...channels, newChannelWithCounts]);
+      await createChannel(newChannel);
       setNewChannel({ name: '', description: '' });
       setIsModalOpen(false);
+      fetchChannels();
     } catch (error) {
       console.error('Error creating channel:', error);
+      alert('Failed to create channel. Please try again.');
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        e.target.value = ''; // Clear the input
+        return;
+      }
+
+      // Check file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Only JPEG, JPG, PNG, and GIF files are allowed');
+        e.target.value = ''; // Clear the input
+        return;
+      }
+
+      setNewMessage(prev => ({ ...prev, image: file }));
+      
+      // Create a preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   const handleCreateMessage = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await createMessage(selectedChannel.id, newMessage);
+      const formData = new FormData();
+      formData.append('title', newMessage.title);
+      formData.append('content', newMessage.content);
+      if (newMessage.image) {
+        formData.append('image', newMessage.image);
+      }
+      
+      const { data } = await createMessage(selectedChannel.id, formData);
       setMessages([...messages, data]);
       // Update the message count for the selected channel
       setChannels(channels.map(channel => 
@@ -82,9 +123,11 @@ const Channels = () => {
           : channel
       ));
       setIsMessageModalOpen(false);
-      setNewMessage({ title: '', content: '' });
+      setNewMessage({ title: '', content: '', image: null });
+      setImagePreview(null);
     } catch (error) {
       console.error('Error creating message:', error);
+      alert('Failed to create message. Please try again.');
     }
   };
 
@@ -142,6 +185,19 @@ const Channels = () => {
                 <div key={message.id} className="message-card">
                   <h3>{message.title}</h3>
                   <p>{message.content}</p>
+                  <div className="message-meta">
+                    <span className="message-date">
+                      {new Date(message.created_at + 'Z').toLocaleString('en-US', { 
+                        timeZone: 'America/Regina',
+                        hour12: true,
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </div>
                   <div className="message-actions">
                     <button className="reply-btn">Reply</button>
                   </div>
@@ -177,7 +233,7 @@ const Channels = () => {
               />
             </div>
             <div className="modal-actions">
-              <button type="button" className="cancel-btn" onClick={() => setIsModalOpen(false)}>
+              <button type="button" className="cancel-btn" onClick={handleCancel}>
                 Cancel
               </button>
               <button type="submit" className="create-btn">
@@ -200,7 +256,7 @@ const Channels = () => {
                   type="text"
                   id="messageTitle"
                   value={newMessage.title}
-                  onChange={(e) => setNewMessage({ ...newMessage, title: e.target.value })}
+                  onChange={(e) => setNewMessage(prev => ({ ...prev, title: e.target.value }))}
                   placeholder="Enter message title"
                   required
                 />
@@ -210,16 +266,37 @@ const Channels = () => {
                 <textarea
                   id="messageContent"
                   value={newMessage.content}
-                  onChange={(e) => setNewMessage({ ...newMessage, content: e.target.value })}
+                  onChange={(e) => setNewMessage(prev => ({ ...prev, content: e.target.value }))}
                   placeholder="Enter message content"
                   required
                 />
+              </div>
+              <div className="form-group">
+                <label htmlFor="image" className="file-input-label">
+                  Add Screenshot
+                  <input
+                    type="file"
+                    id="image"
+                    accept="image/jpeg,image/jpg,image/png,image/gif"
+                    onChange={handleImageChange}
+                    className="file-input"
+                  />
+                </label>
+                {imagePreview && (
+                  <div className="image-preview">
+                    <img src={imagePreview} alt="Preview" />
+                  </div>
+                )}
               </div>
               <div className="modal-actions">
                 <button 
                   type="button" 
                   className="cancel-btn"
-                  onClick={() => setIsMessageModalOpen(false)}
+                  onClick={() => {
+                    setIsMessageModalOpen(false);
+                    setNewMessage({ title: '', content: '', image: null });
+                    setImagePreview(null);
+                  }}
                 >
                   Cancel
                 </button>

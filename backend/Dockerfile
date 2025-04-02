@@ -8,8 +8,8 @@ RUN npm install
 
 COPY . .
 
-# Create uploads directory
-RUN mkdir -p uploads
+# Create uploads directory with proper permissions
+RUN mkdir -p uploads && chmod 777 uploads
 
 EXPOSE 8000
 

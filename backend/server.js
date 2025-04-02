@@ -202,48 +202,58 @@ app.get('/api/channels/:id', (req, res) => {
 
 // Message Routes (Programming Questions)
 // Create a new message in a channel
-app.post('/api/channels/:channelId/messages', upload.single('image'), async (req, res) => {
+app.post('/api/channels/:channelId/messages', upload.single('image'), (req, res) => {
   const { channelId } = req.params;
   const { title, content } = req.body;
   let imageUrl = null;
 
+  console.log('Received message creation request:', {
+    channelId,
+    title,
+    content,
+    hasFile: !!req.file,
+    fileDetails: req.file
+  });
+
   if (req.file) {
     imageUrl = `/uploads/${req.file.filename}`;
+    console.log('File uploaded successfully:', {
+      filename: req.file.filename,
+      path: req.file.path,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+      imageUrl
+    });
   }
 
   const query = 'INSERT INTO messages (channel_id, title, content, image_url) VALUES (?, ?, ?, ?)';
   
-  try {
-    const connection = await createConnection();
-    connection.query(query, [channelId, title, content, imageUrl], async (err, results) => {
+  db.query(query, [channelId, title, content, imageUrl], (err, results) => {
+    if (err) {
+      console.error('Error creating message:', err);
+      res.status(500).json({ error: err.message });
+      return;
+    }
+
+    // Get the newly created message with formatted timestamp
+    const getMessageQuery = `
+      SELECT id, channel_id, title, content, image_url,
+             DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at
+      FROM messages 
+      WHERE id = ?
+    `;
+    
+    db.query(getMessageQuery, [results.insertId], (err, messageResults) => {
       if (err) {
-        connection.end();
+        console.error('Error fetching created message:', err);
         res.status(500).json({ error: err.message });
         return;
       }
-
-      // Get the newly created message with formatted timestamp
-      const getMessageQuery = `
-        SELECT id, channel_id, title, content, image_url,
-               DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at
-        FROM messages 
-        WHERE id = ?
-      `;
       
-      connection.query(getMessageQuery, [results.insertId], (err, messageResults) => {
-        connection.end();
-        if (err) {
-          res.status(500).json({ error: err.message });
-          return;
-        }
-        
-        res.status(201).json(messageResults[0]);
-      });
+      console.log('Created message:', messageResults[0]);
+      res.status(201).json(messageResults[0]);
     });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Failed to create message' });
-  }
+  });
 });
 
 // Get all messages in a channel

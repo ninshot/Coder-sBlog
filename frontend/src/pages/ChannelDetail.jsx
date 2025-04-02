@@ -8,13 +8,18 @@ const ChannelDetail = () => {
   const navigate = useNavigate();
   const [channel, setChannel] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState({ title: '', content: '' });
+  const [newMessage, setNewMessage] = useState({
+    title: '',
+    content: '',
+    image: null
+  });
   const [newReply, setNewReply] = useState({ content: '' });
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
   const [replyContent, setReplyContent] = useState('');
+  const [imagePreview, setImagePreview] = useState(null);
 
   useEffect(() => {
     fetchChannelDetails();
@@ -34,21 +39,65 @@ const ChannelDetail = () => {
   const fetchMessages = async () => {
     try {
       const { data } = await getMessagesByChannel(channelId);
+      console.log('Fetched messages:', data);
       setMessages(data);
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size must be less than 5MB');
+        e.target.value = ''; // Clear the input
+        return;
+      }
+
+      // Check file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Only JPEG, JPG, PNG, and GIF files are allowed');
+        e.target.value = ''; // Clear the input
+        return;
+      }
+
+      setNewMessage(prev => ({ ...prev, image: file }));
+      
+      // Create a preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleCreateMessage = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await createMessage(channelId, newMessage);
-      setMessages([...messages, data]);
+      const formData = new FormData();
+      formData.append('title', newMessage.title);
+      formData.append('content', newMessage.content);
+      if (newMessage.image) {
+        formData.append('image', newMessage.image);
+      }
+      
+      // Show loading state
       setIsMessageModalOpen(false);
-      setNewMessage({ title: '', content: '' });
+      await createMessage(channelId, formData);
+      
+      // Reset form
+      setNewMessage({ title: '', content: '', image: null });
+      setImagePreview(null);
+      
+      // Refresh messages
+      fetchMessages();
     } catch (error) {
       console.error('Error creating message:', error);
+      alert('Failed to create message. Please try again.');
     }
   };
 
@@ -125,14 +174,23 @@ const ChannelDetail = () => {
             <div className="message-header">
               <h3 className="message-title">{message.title}</h3>
               <span className="message-date">
-                {new Date(message.created_at).toLocaleString()}
+                {new Date(message.created_at + 'Z').toLocaleString('en-US', { 
+                  timeZone: 'America/Regina',
+                  hour12: true,
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
               </span>
             </div>
             <div className="message-content">
-              {message.content}
+              <p>{message.content}</p>
               {message.image_url && (
                 <div className="message-image">
-                  <img src={message.image_url} alt="Message attachment" />
+                  {console.log('Image URL:', message.image_url)}
+                  <img src={`http://localhost:8000${message.image_url}`} alt="Message attachment" />
                 </div>
               )}
             </div>
@@ -179,7 +237,17 @@ const ChannelDetail = () => {
                   <div key={reply.id} className="reply-card">
                     <div className="reply-content">{reply.content}</div>
                     <div className="reply-meta">
-                      {new Date(reply.created_at).toLocaleString()}
+                      <span className="reply-date">
+                        {new Date(reply.created_at + 'Z').toLocaleString('en-US', { 
+                          timeZone: 'America/Regina',
+                          hour12: true,
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -192,15 +260,15 @@ const ChannelDetail = () => {
       {/* Message Modal */}
       <div className={`modal-overlay ${isMessageModalOpen ? 'active' : ''}`}>
         <div className="modal-content">
-          <h2 className="modal-title">New Message</h2>
-          <form className="message-form" onSubmit={handleCreateMessage}>
+          <h2>New Message</h2>
+          <form onSubmit={handleCreateMessage}>
             <div className="form-group">
               <label htmlFor="title">Title</label>
               <input
                 type="text"
                 id="title"
                 value={newMessage.title}
-                onChange={(e) => setNewMessage({ ...newMessage, title: e.target.value })}
+                onChange={(e) => setNewMessage(prev => ({ ...prev, title: e.target.value }))}
                 required
               />
             </div>
@@ -209,12 +277,33 @@ const ChannelDetail = () => {
               <textarea
                 id="content"
                 value={newMessage.content}
-                onChange={(e) => setNewMessage({ ...newMessage, content: e.target.value })}
+                onChange={(e) => setNewMessage(prev => ({ ...prev, content: e.target.value }))}
                 required
               />
             </div>
+            <div className="form-group">
+              <label htmlFor="image" className="file-input-label">
+                Upload Image
+                <input
+                  type="file"
+                  id="image"
+                  accept="image/jpeg,image/jpg,image/png,image/gif"
+                  onChange={handleImageChange}
+                  className="file-input"
+                />
+              </label>
+              {imagePreview && (
+                <div className="image-preview">
+                  <img src={imagePreview} alt="Preview" />
+                </div>
+              )}
+            </div>
             <div className="modal-actions">
-              <button type="button" className="cancel-btn" onClick={() => setIsMessageModalOpen(false)}>
+              <button type="button" className="cancel-btn" onClick={() => {
+                setIsMessageModalOpen(false);
+                setNewMessage({ title: '', content: '', image: null });
+                setImagePreview(null);
+              }}>
                 Cancel
               </button>
               <button type="submit" className="create-btn">

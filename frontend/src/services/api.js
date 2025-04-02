@@ -17,8 +17,13 @@ export const createChannel = (channelData) => api.post('/channels', channelData)
 
 export const getMessagesByChannel = (channelId) => api.get(`/channels/${channelId}/messages`);
 export const getMessageById = (messageId) => api.get(`/messages/${messageId}`);
-export const createMessage = (channelId, messageData) => 
-  api.post(`/channels/${channelId}/messages`, messageData);
+export const createMessage = (channelId, messageData) => {
+  // If messageData is FormData, don't set Content-Type header
+  const headers = messageData instanceof FormData ? {} : {
+    'Content-Type': 'application/json',
+  };
+  return api.post(`/channels/${channelId}/messages`, messageData, { headers });
+};
 
 
 export const createReply = (messageId, replyData) => 
