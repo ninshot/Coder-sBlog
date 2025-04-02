@@ -380,7 +380,7 @@ app.post('/api/channels/:channelId/messages', authenticateToken, upload.single('
 });
 
 // Get all messages in a channel
-app.get('/api/channels/:channelId/messages', async (req, res) => {
+app.get('/api/channels/:channelId/messages', (req, res) => {
   const { channelId } = req.params;
   const query = `
     SELECT m.*, 
@@ -407,28 +407,21 @@ app.get('/api/channels/:channelId/messages', async (req, res) => {
     ORDER BY m.created_at DESC
   `;
   
-  try {
-    const connection = await createConnection();
-    connection.query(query, [channelId], (err, results) => {
-      connection.end();
-      if (err) {
-        console.error('Error fetching messages:', err);
-        res.status(500).json({ error: err.message });
-        return;
-      }
-      
-      // The replies are already parsed by mysql2
-      const messages = results.map(message => ({
-        ...message,
-        replies: message.replies || []
-      }));
-      
-      res.json(messages);
-    });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Failed to fetch messages' });
-  }
+  db.query(query, [channelId], (err, results) => {
+    if (err) {
+      console.error('Error fetching messages:', err);
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    
+    // The replies are already parsed by mysql2
+    const messages = results.map(message => ({
+      ...message,
+      replies: message.replies || []
+    }));
+    
+    res.json(messages);
+  });
 });
 
 // Get a specific message with its replies
