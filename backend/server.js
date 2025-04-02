@@ -112,23 +112,34 @@ function createTables(connection) {
       console.log('Messages table created or already exists');
     });
 
-    // Create replies table (answers/responses)
-    connection.query(`
-      CREATE TABLE IF NOT EXISTS replies (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        message_id INT,
-        content TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
-      )
-    `, (err) => {
+    // Drop and recreate replies table to ensure it has the image_url column
+    connection.query(`DROP TABLE IF EXISTS replies`, (err) => {
       if (err) {
-        console.error('Error creating replies table:', err);
+        console.error('Error dropping replies table:', err);
         reject(err);
         return;
       }
-      console.log('Replies table created or already exists');
-      resolve();
+      console.log('Replies table dropped (if existed)');
+
+      // Create replies table with image_url
+      connection.query(`
+        CREATE TABLE replies (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          message_id INT,
+          content TEXT NOT NULL,
+          image_url VARCHAR(255),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+        )
+      `, (err) => {
+        if (err) {
+          console.error('Error creating replies table:', err);
+          reject(err);
+          return;
+        }
+        console.log('Replies table created with image_url column');
+        resolve();
+      });
     });
   });
 }
@@ -268,6 +279,7 @@ app.get('/api/channels/:channelId/messages', async (req, res) => {
                  JSON_OBJECT(
                    'id', r.id,
                    'content', r.content,
+                   'image_url', r.image_url,
                    'created_at', DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s')
                  )
                )
@@ -330,48 +342,69 @@ app.get('/api/messages/:messageId', (req, res) => {
 
 // Reply Routes (Answers/Responses)
 // Create a reply to a message
-app.post('/api/messages/:messageId/replies', async (req, res) => {
+app.post('/api/messages/:messageId/replies', upload.single('image'), (req, res) => {
   const { messageId } = req.params;
   const { content } = req.body;
-  const query = 'INSERT INTO replies (message_id, content) VALUES (?, ?)';
+  let imageUrl = null;
+
+  console.log('Received reply creation request:', {
+    messageId,
+    content,
+    hasFile: !!req.file,
+    fileDetails: req.file
+  });
+
+  if (req.file) {
+    imageUrl = `/uploads/${req.file.filename}`;
+    console.log('File uploaded successfully:', {
+      filename: req.file.filename,
+      path: req.file.path,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+      imageUrl
+    });
+  }
+
+  const query = 'INSERT INTO replies (message_id, content, image_url) VALUES (?, ?, ?)';
   
-  try {
-    const connection = await createConnection();
-    connection.query(query, [messageId, content], async (err, results) => {
+  db.query(query, [messageId, content, imageUrl], (err, results) => {
+    if (err) {
+      console.error('Error creating reply:', err);
+      res.status(500).json({ error: err.message });
+      return;
+    }
+
+    // Get the newly created reply with formatted timestamp
+    const getReplyQuery = `
+      SELECT id, message_id, content, image_url,
+             DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at
+      FROM replies 
+      WHERE id = ?
+    `;
+    
+    db.query(getReplyQuery, [results.insertId], (err, replyResults) => {
       if (err) {
-        connection.end();
+        console.error('Error fetching created reply:', err);
         res.status(500).json({ error: err.message });
         return;
       }
-
-      // Get the newly created reply with formatted timestamp
-      const getReplyQuery = `
-        SELECT id, message_id, content, 
-               DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at
-        FROM replies 
-        WHERE id = ?
-      `;
       
-      connection.query(getReplyQuery, [results.insertId], (err, replyResults) => {
-        connection.end();
-        if (err) {
-          res.status(500).json({ error: err.message });
-          return;
-        }
-        
-        res.status(201).json(replyResults[0]);
-      });
+      console.log('Created reply:', replyResults[0]);
+      res.status(201).json(replyResults[0]);
     });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Failed to create reply' });
-  }
+  });
 });
 
 // Get all replies for a message
 app.get('/api/messages/:messageId/replies', (req, res) => {
   const { messageId } = req.params;
-  const query = 'SELECT * FROM replies WHERE message_id = ? ORDER BY created_at ASC';
+  const query = `
+    SELECT id, message_id, content, image_url,
+           DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at
+    FROM replies 
+    WHERE message_id = ? 
+    ORDER BY created_at ASC
+  `;
   
   db.query(query, [messageId], (err, results) => {
     if (err) {
