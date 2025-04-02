@@ -689,35 +689,77 @@ app.delete('/api/admin/channels/:channelId', authenticateToken, requireAdmin, (r
   });
 });
 
-// Delete a message (admin only)
-app.delete('/api/admin/messages/:messageId', authenticateToken, requireAdmin, (req, res) => {
+// Delete a message (user can delete their own messages)
+app.delete('/api/messages/:messageId', authenticateToken, (req, res) => {
   const { messageId } = req.params;
-  const query = 'DELETE FROM messages WHERE id = ?';
+  const userId = req.user.id;
+  const isAdmin = req.user.isAdmin;
+
+  // First check if the message exists and belongs to the user
+  const checkQuery = 'SELECT user_id FROM messages WHERE id = ?';
   
-  db.query(query, [messageId], (err, results) => {
+  db.query(checkQuery, [messageId], (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
-    if (results.affectedRows === 0) {
+    if (results.length === 0) {
       return res.status(404).json({ message: 'Message not found' });
     }
-    res.json({ message: 'Message deleted successfully' });
+
+    const message = results[0];
+    // Only allow deletion if user is admin or owns the message
+    if (!isAdmin && message.user_id !== userId) {
+      return res.status(403).json({ message: 'Not authorized to delete this message' });
+    }
+
+    // Delete the message
+    const deleteQuery = 'DELETE FROM messages WHERE id = ?';
+    db.query(deleteQuery, [messageId], (err, results) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ message: 'Message not found' });
+      }
+      res.json({ message: 'Message deleted successfully' });
+    });
   });
 });
 
-// Delete a reply (admin only)
-app.delete('/api/admin/replies/:replyId', authenticateToken, requireAdmin, (req, res) => {
+// Delete a reply (user can delete their own replies)
+app.delete('/api/replies/:replyId', authenticateToken, (req, res) => {
   const { replyId } = req.params;
-  const query = 'DELETE FROM replies WHERE id = ?';
+  const userId = req.user.id;
+  const isAdmin = req.user.isAdmin;
+
+  // First check if the reply exists and belongs to the user
+  const checkQuery = 'SELECT user_id FROM replies WHERE id = ?';
   
-  db.query(query, [replyId], (err, results) => {
+  db.query(checkQuery, [replyId], (err, results) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
-    if (results.affectedRows === 0) {
+    if (results.length === 0) {
       return res.status(404).json({ message: 'Reply not found' });
     }
-    res.json({ message: 'Reply deleted successfully' });
+
+    const reply = results[0];
+    // Only allow deletion if user is admin or owns the reply
+    if (!isAdmin && reply.user_id !== userId) {
+      return res.status(403).json({ message: 'Not authorized to delete this reply' });
+    }
+
+    // Delete the reply
+    const deleteQuery = 'DELETE FROM replies WHERE id = ?';
+    db.query(deleteQuery, [replyId], (err, results) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ message: 'Reply not found' });
+      }
+      res.json({ message: 'Reply deleted successfully' });
+    });
   });
 });
 
