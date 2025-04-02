@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getChannels, createChannel, getMessagesByChannel, createMessage } from '../services/api';
-import '../styles/Channels.css';
+import '../styles/channels.css';
 
 const Channels = () => {
   const [channels, setChannels] = useState([]);
