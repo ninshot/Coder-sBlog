@@ -15,14 +15,21 @@ const app = express();
 // Configure multer for image uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = 'uploads';
+    const uploadDir = path.join(__dirname, 'uploads');
+    // Ensure uploads directory exists with proper permissions
     if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir);
+      fs.mkdirSync(uploadDir, { recursive: true });
     }
+    // Set directory permissions
+    fs.chmodSync(uploadDir, '777');
+    console.log('Upload directory:', uploadDir);
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const filename = uniqueSuffix + path.extname(file.originalname);
+    console.log('Generated filename:', filename);
+    cb(null, filename);
   }
 });
 
@@ -46,7 +53,7 @@ const upload = multer({
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Database connection configuration
 const dbConfig = {
@@ -112,33 +119,55 @@ function createTables(connection) {
       console.log('Messages table created or already exists');
     });
 
-    // Drop and recreate replies table to ensure it has the image_url column
-    connection.query(`DROP TABLE IF EXISTS replies`, (err) => {
+    // Create replies table if it doesn't exist
+    connection.query(`
+      CREATE TABLE IF NOT EXISTS replies (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        message_id INT,
+        content TEXT NOT NULL,
+        image_url VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+      )
+    `, (err) => {
       if (err) {
-        console.error('Error dropping replies table:', err);
+        console.error('Error creating replies table:', err);
         reject(err);
         return;
       }
-      console.log('Replies table dropped (if existed)');
+      console.log('Replies table created or already exists');
 
-      // Create replies table with image_url
+      // Check if image_url column exists, add it if it doesn't
       connection.query(`
-        CREATE TABLE replies (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          message_id INT,
-          content TEXT NOT NULL,
-          image_url VARCHAR(255),
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
-        )
-      `, (err) => {
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'replies' 
+        AND COLUMN_NAME = 'image_url'
+      `, (err, results) => {
         if (err) {
-          console.error('Error creating replies table:', err);
+          console.error('Error checking for image_url column:', err);
           reject(err);
           return;
         }
-        console.log('Replies table created with image_url column');
-        resolve();
+
+        if (results.length === 0) {
+          // Add image_url column if it doesn't exist
+          connection.query(`
+            ALTER TABLE replies 
+            ADD COLUMN image_url VARCHAR(255)
+          `, (err) => {
+            if (err) {
+              console.error('Error adding image_url column:', err);
+              reject(err);
+              return;
+            }
+            console.log('Added image_url column to replies table');
+            resolve();
+          });
+        } else {
+          console.log('image_url column already exists in replies table');
+          resolve();
+        }
       });
     });
   });
