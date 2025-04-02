@@ -7,11 +7,15 @@ import ProtectedRoute from './components/ProtectedRoute';
 import LandingPage from './pages/LandingPage';
 import Channels from './pages/Channels';
 import ChannelDetail from './pages/ChannelDetail';
+import AdminDashboard from './pages/AdminDashboard';
 import './styles/general.css';
 
 const Navigation = () => {
   const location = useLocation();
   const isAuthenticated = localStorage.getItem('token') && localStorage.getItem('user');
+  const user = isAuthenticated ? JSON.parse(localStorage.getItem('user')) : null;
+  const isAdmin = user?.isAdmin;
+  const isAdminPage = location.pathname === '/admin';
 
   if (isAuthenticated) {
     return (
@@ -21,39 +25,82 @@ const Navigation = () => {
         padding: '0 1rem',
         width: '100%'
       }}>
-        {location.pathname.includes('/channels/') && (
-          <Link 
-            to="/channels" 
-            style={{ 
-              textDecoration: 'none',
-              padding: '0.75rem',
-              background: 'black',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '1rem',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              fontWeight: '500'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'white';
-              e.currentTarget.style.color = 'black';
-              e.currentTarget.style.border = '2px solid black';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'black';
-              e.currentTarget.style.color = 'white';
-              e.currentTarget.style.border = 'none';
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            Home
-          </Link>
-        )}
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          {(location.pathname.includes('/channels/') || isAdminPage) && (
+            <Link 
+              to="/channels" 
+              style={{ 
+                textDecoration: 'none',
+                padding: '0.75rem',
+                background: 'black',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '1rem',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                fontWeight: '500'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'white';
+                e.currentTarget.style.color = 'black';
+                e.currentTarget.style.border = '2px solid black';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'black';
+                e.currentTarget.style.color = 'white';
+                e.currentTarget.style.border = 'none';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              {isAdminPage ? 'Back to Channels' : 'Home'}
+            </Link>
+          )}
+          {isAdmin && !isAdminPage ? (
+            <Link 
+              to="/admin" 
+              style={{ 
+                textDecoration: 'none',
+                padding: '0.75rem',
+                background: 'black',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '1rem',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                fontWeight: '500'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'white';
+                e.currentTarget.style.color = 'black';
+                e.currentTarget.style.border = '2px solid black';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'black';
+                e.currentTarget.style.color = 'white';
+                e.currentTarget.style.border = 'none';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              Admin Dashboard
+            </Link>
+          ) : null}
+          <span style={{ 
+            color: 'white',
+            fontWeight: '500',
+            fontSize: '1rem',
+            marginLeft: '1rem'
+          }}>
+            {user?.username}
+          </span>
+        </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <Logout />
         </div>
@@ -120,6 +167,14 @@ const App = () => {
             />
             <Route path="/" element={<LandingPage />} />
             <Route path="/channels/:channelId" element={<ChannelDetail />} />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </div>
       </div>
