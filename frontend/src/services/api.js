@@ -22,11 +22,21 @@ export const createMessage = (channelId, messageData) => {
   const headers = messageData instanceof FormData ? {} : {
     'Content-Type': 'application/json',
   };
-  return api.post(`/channels/${channelId}/messages`, messageData, { headers });
+  return api.post(`/channels/${channelId}/messages`, messageData, { 
+    headers,
+    transformRequest: messageData instanceof FormData ? [function (data) {
+      return data; // Don't transform FormData
+    }] : undefined
+  });
 };
 
 
-export const createReply = (messageId, replyData) => 
-  api.post(`/messages/${messageId}/replies`, replyData);
+export const createReply = (messageId, replyData) => {
+  // If replyData is FormData, don't set Content-Type header
+  const headers = replyData instanceof FormData ? {} : {
+    'Content-Type': 'application/json',
+  };
+  return api.post(`/messages/${messageId}/replies`, replyData, { headers });
+};
 
 export default api; 

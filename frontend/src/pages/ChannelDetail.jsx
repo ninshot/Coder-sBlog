@@ -13,13 +13,17 @@ const ChannelDetail = () => {
     content: '',
     image: null
   });
-  const [newReply, setNewReply] = useState({ content: '' });
+  const [newReply, setNewReply] = useState({ 
+    content: '',
+    image: null 
+  });
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
-  const [replyContent, setReplyContent] = useState('');
-  const [imagePreview, setImagePreview] = useState(null);
+  const [messageImagePreview, setMessageImagePreview] = useState(null);
+  const [replyImagePreview, setReplyImagePreview] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchChannelDetails();
@@ -46,12 +50,12 @@ const ChannelDetail = () => {
     }
   };
 
-  const handleImageChange = (e) => {
+  const handleImageChange = (e, type) => {
     const file = e.target.files[0];
     if (file) {
       // Check file size (5MB limit)
       if (file.size > 5 * 1024 * 1024) {
-        alert('File size must be less than 5MB');
+        setError('File size must be less than 5MB');
         e.target.value = ''; // Clear the input
         return;
       }
@@ -59,19 +63,36 @@ const ChannelDetail = () => {
       // Check file type
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
       if (!allowedTypes.includes(file.type)) {
-        alert('Only JPEG, JPG, PNG, and GIF files are allowed');
+        setError('Only JPEG, JPG, PNG, and GIF files are allowed');
         e.target.value = ''; // Clear the input
         return;
       }
 
-      setNewMessage(prev => ({ ...prev, image: file }));
+      console.log('Selected file:', file);
+      console.log('File size:', file.size);
+      console.log('File type:', file.type);
+
+      setError(null);
       
-      // Create a preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+      if (type === 'message') {
+        setNewMessage(prev => ({ ...prev, image: file }));
+        // Create a preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setMessageImagePreview(reader.result);
+          console.log('Message image preview set:', reader.result);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setNewReply(prev => ({ ...prev, image: file }));
+        // Create a preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setReplyImagePreview(reader.result);
+          console.log('Reply image preview set:', reader.result);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -81,56 +102,65 @@ const ChannelDetail = () => {
       const formData = new FormData();
       formData.append('title', newMessage.title);
       formData.append('content', newMessage.content);
+      
       if (newMessage.image) {
         formData.append('image', newMessage.image);
+        console.log('Sending message image:', newMessage.image);
+        console.log('Image size:', newMessage.image.size);
+        console.log('Image type:', newMessage.image.type);
       }
       
-      // Show loading state
+      console.log('FormData entries:');
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+      }
+      
       setIsMessageModalOpen(false);
-      await createMessage(channelId, formData);
+      const response = await createMessage(channelId, formData);
+      console.log('Message creation response:', response);
       
       // Reset form
       setNewMessage({ title: '', content: '', image: null });
-      setImagePreview(null);
+      setMessageImagePreview(null);
       
       // Refresh messages
       fetchMessages();
     } catch (error) {
       console.error('Error creating message:', error);
-      alert('Failed to create message. Please try again.');
+      setError('Failed to create message. Please try again.');
     }
   };
 
   const handleCreateReply = async (messageId) => {
-    if (!replyContent.trim()) return;
-    
     try {
-      const { data } = await createReply(messageId, { content: replyContent });
-      console.log('Reply data received:', data);
+      const formData = new FormData();
+      formData.append('content', newReply.content);
       
-      // Update messages state with the new reply
-      setMessages(messages.map(msg => {
-        if (msg.id === messageId) {
-          console.log('Current message:', msg);
-          console.log('Current replies:', msg.replies);
-          const updatedReplies = [...(msg.replies || []), {
-            id: data.id,
-            content: data.content,
-            created_at: data.created_at
-          }];
-          console.log('Updated replies:', updatedReplies);
-          return {
-            ...msg,
-            replies: updatedReplies
-          };
-        }
-        return msg;
-      }));
+      if (newReply.image) {
+        formData.append('image', newReply.image);
+        console.log('Sending reply image:', newReply.image);
+        console.log('Image size:', newReply.image.size);
+        console.log('Image type:', newReply.image.type);
+      }
       
-      setReplyContent('');
-      setReplyingTo(null);
+      console.log('FormData entries:');
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+      }
+      
+      setIsReplyModalOpen(false);
+      const response = await createReply(messageId, formData);
+      console.log('Reply creation response:', response);
+      
+      // Reset form
+      setNewReply({ content: '', image: null });
+      setReplyImagePreview(null);
+      
+      // Refresh messages
+      fetchMessages();
     } catch (error) {
       console.error('Error creating reply:', error);
+      setError('Failed to create reply. Please try again.');
     }
   };
 
@@ -155,6 +185,7 @@ const ChannelDetail = () => {
         </div>
         <div className="header-right">
           <button 
+            type="button"
             className="new-message-btn"
             onClick={() => setIsMessageModalOpen(true)}
           >
@@ -189,7 +220,7 @@ const ChannelDetail = () => {
               <p>{message.content}</p>
               {message.image_url && (
                 <div className="message-image">
-                  {console.log('Image URL:', message.image_url)}
+                  {console.log('Message Image URL:', message.image_url)}
                   <img src={`http://localhost:8000${message.image_url}`} alt="Message attachment" />
                 </div>
               )}
@@ -206,17 +237,36 @@ const ChannelDetail = () => {
             {replyingTo === message.id && (
               <div className="reply-section">
                 <textarea
-                  value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
+                  value={newReply.content}
+                  onChange={(e) => setNewReply({ ...newReply, content: e.target.value })}
                   placeholder="Write your reply..."
                   className="reply-textarea"
                 />
+                <div className="form-group">
+                  <label htmlFor="replyImage" className="file-input-label">
+                    Upload Image
+                    <input
+                      type="file"
+                      id="replyImage"
+                      name="image"
+                      accept="image/*"
+                      onChange={(e) => handleImageChange(e, 'reply')}
+                      className="file-input"
+                    />
+                  </label>
+                  {replyImagePreview && (
+                    <div className="image-preview">
+                      <img src={replyImagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }} />
+                    </div>
+                  )}
+                </div>
                 <div className="reply-actions">
                   <button 
                     className="cancel-reply-btn"
                     onClick={() => {
                       setReplyingTo(null);
-                      setReplyContent('');
+                      setNewReply({ content: '', image: null });
+                      setReplyImagePreview(null);
                     }}
                   >
                     Cancel
@@ -236,6 +286,12 @@ const ChannelDetail = () => {
                 {message.replies.map((reply) => (
                   <div key={reply.id} className="reply-card">
                     <div className="reply-content">{reply.content}</div>
+                    {reply.image_url && (
+                      <div className="reply-image">
+                        {console.log('Reply Image URL:', reply.image_url)}
+                        <img src={`http://localhost:8000${reply.image_url}`} alt="Reply attachment" />
+                      </div>
+                    )}
                     <div className="reply-meta">
                       <span className="reply-date">
                         {new Date(reply.created_at + 'Z').toLocaleString('en-US', { 
@@ -258,10 +314,10 @@ const ChannelDetail = () => {
       </div>
 
       {/* Message Modal */}
-      <div className={`modal-overlay ${isMessageModalOpen ? 'active' : ''}`}>
-        <div className="modal-content">
+      <div className={`modal-overlay ${isMessageModalOpen ? 'active' : ''}`} onClick={() => setIsMessageModalOpen(false)}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
           <h2>New Message</h2>
-          <form onSubmit={handleCreateMessage}>
+          <form onSubmit={handleCreateMessage} encType="multipart/form-data">
             <div className="form-group">
               <label htmlFor="title">Title</label>
               <input
@@ -287,23 +343,28 @@ const ChannelDetail = () => {
                 <input
                   type="file"
                   id="image"
-                  accept="image/jpeg,image/jpg,image/png,image/gif"
-                  onChange={handleImageChange}
+                  name="image"
+                  accept="image/*"
+                  onChange={(e) => handleImageChange(e, 'message')}
                   className="file-input"
                 />
               </label>
-              {imagePreview && (
+              {messageImagePreview && (
                 <div className="image-preview">
-                  <img src={imagePreview} alt="Preview" />
+                  <img src={messageImagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }} />
                 </div>
               )}
             </div>
             <div className="modal-actions">
-              <button type="button" className="cancel-btn" onClick={() => {
-                setIsMessageModalOpen(false);
-                setNewMessage({ title: '', content: '', image: null });
-                setImagePreview(null);
-              }}>
+              <button 
+                type="button" 
+                className="cancel-btn" 
+                onClick={() => {
+                  setIsMessageModalOpen(false);
+                  setNewMessage({ title: '', content: '', image: null });
+                  setMessageImagePreview(null);
+                }}
+              >
                 Cancel
               </button>
               <button type="submit" className="create-btn">
@@ -315,37 +376,60 @@ const ChannelDetail = () => {
       </div>
 
       {/* Reply Modal */}
-      {isReplyModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsReplyModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">Reply to Message</h2>
-            <form onSubmit={handleCreateReply} className="message-form">
-              <div className="form-group">
-                <label htmlFor="replyContent">Your Reply</label>
-                <textarea
-                  id="replyContent"
-                  value={newReply.content}
-                  onChange={(e) => setNewReply({ content: e.target.value })}
-                  placeholder="Enter your reply"
-                  required
+      <div className={`modal-overlay ${isReplyModalOpen ? 'active' : ''}`} onClick={() => setIsReplyModalOpen(false)}>
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <h2 className="modal-title">Reply to Message</h2>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            handleCreateReply(replyingTo);
+          }} className="message-form" encType="multipart/form-data">
+            <div className="form-group">
+              <label htmlFor="replyContent">Your Reply</label>
+              <textarea
+                id="replyContent"
+                value={newReply.content}
+                onChange={(e) => setNewReply(prev => ({ ...prev, content: e.target.value }))}
+                placeholder="Enter your reply"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="replyImage" className="file-input-label">
+                Upload Image
+                <input
+                  type="file"
+                  id="replyImage"
+                  name="image"
+                  accept="image/*"
+                  onChange={(e) => handleImageChange(e, 'reply')}
+                  className="file-input"
                 />
-              </div>
-              <div className="modal-actions">
-                <button 
-                  type="button" 
-                  className="cancel-btn"
-                  onClick={() => setIsReplyModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="create-btn">
-                  Reply
-                </button>
-              </div>
-            </form>
-          </div>
+              </label>
+              {replyImagePreview && (
+                <div className="image-preview">
+                  <img src={replyImagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }} />
+                </div>
+              )}
+            </div>
+            <div className="modal-actions">
+              <button 
+                type="button" 
+                className="cancel-btn" 
+                onClick={() => {
+                  setIsReplyModalOpen(false);
+                  setNewReply({ content: '', image: null });
+                  setReplyImagePreview(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button type="submit" className="create-btn">
+                Send Reply
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
     </div>
   );
 };
