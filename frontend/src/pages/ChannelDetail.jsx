@@ -21,6 +21,8 @@ const ChannelDetail = () => {
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
+  const [parentReplyId, setParentReplyId] = useState(null);
+  const [replyingToReplyId, setReplyingToReplyId] = useState(null);
   const [messageImagePreview, setMessageImagePreview] = useState(null);
   const [replyImagePreview, setReplyImagePreview] = useState(null);
   const [error, setError] = useState(null);
@@ -177,8 +179,6 @@ const ChannelDetail = () => {
       const token = localStorage.getItem('token');
       const user = JSON.parse(localStorage.getItem('user'));
       
-      console.log('User data from localStorage:', user); // Debug log
-      
       if (!token || !user) {
         throw new Error('Not authenticated');
       }
@@ -188,13 +188,12 @@ const ChannelDetail = () => {
       formData.append('user_id', user.id);
       formData.append('displayName', user.displayName);
       
-      console.log('FormData entries:'); // Debug log
-      for (let pair of formData.entries()) {
-        console.log(pair[0] + ': ' + pair[1]);
-      }
-      
       if (newReply.image) {
         formData.append('image', newReply.image);
+      }
+
+      if (parentReplyId) {
+        formData.append('parent_reply_id', parentReplyId);
       }
 
       const response = await fetch(`http://localhost:8000/api/messages/${messageId}/replies`, {
@@ -211,12 +210,14 @@ const ChannelDetail = () => {
       }
 
       const data = await response.json();
-      console.log('Reply created with data:', data); // Debug log
+      console.log('Reply created with data:', data);
       
-      // Reset reply form
+      // Reset reply form and state
       setNewReply({ content: '', image: null });
       setReplyImagePreview(null);
       setReplyingTo(null);
+      setParentReplyId(null);
+      setReplyingToReplyId(null);
       
       // Refresh messages
       fetchMessages();
@@ -226,8 +227,19 @@ const ChannelDetail = () => {
     }
   };
 
-  const handleReplyClick = (message) => {
-    setReplyingTo(message.id);
+  const handleReplyClick = (message, replyId = null) => {
+    // Clear all reply states first
+    setReplyingTo(null);
+    setReplyingToReplyId(null);
+    setParentReplyId(null);
+    
+    // Then set the appropriate state
+    if (replyId) {
+      setReplyingToReplyId(replyId);
+      setParentReplyId(replyId);
+    } else {
+      setReplyingTo(message.id);
+    }
   };
 
   const handleDeleteMessage = async (messageId) => {
@@ -420,6 +432,7 @@ const ChannelDetail = () => {
                     className="cancel-reply-btn"
                     onClick={() => {
                       setReplyingTo(null);
+                      setReplyingToReplyId(null);
                       setNewReply({ content: '', image: null });
                       setReplyImagePreview(null);
                     }}
@@ -457,6 +470,12 @@ const ChannelDetail = () => {
                             year: 'numeric'
                           })}
                         </span>
+                        <button 
+                          onClick={() => handleReplyClick(message, reply.id)}
+                          className="reply-btn"
+                        >
+                          Reply
+                        </button>
                         {(user?.isAdmin || reply.user_id === user?.id) && (
                           <button 
                             onClick={() => handleDeleteReply(reply.id)}
@@ -489,6 +508,54 @@ const ChannelDetail = () => {
                     {reply.image_url && (
                       <div className="reply-image">
                         <img src={`http://localhost:8000${reply.image_url}`} alt="Reply attachment" />
+                      </div>
+                    )}
+                    {replyingToReplyId === reply.id && (
+                      <div className="reply-section">
+                        <textarea
+                          value={newReply.content}
+                          onChange={(e) => setNewReply({ ...newReply, content: e.target.value })}
+                          placeholder="Write your reply..."
+                          className="reply-textarea"
+                        />
+                        <div className="form-group">
+                          <label htmlFor="replyImage" className="file-input-label">
+                            Upload Image
+                            <input
+                              type="file"
+                              id="replyImage"
+                              name="image"
+                              accept="image/*"
+                              onChange={(e) => handleImageChange(e, 'reply')}
+                              className="file-input"
+                            />
+                          </label>
+                          {replyImagePreview && (
+                            <div className="image-preview">
+                              <img src={replyImagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }} />
+                            </div>
+                          )}
+                        </div>
+                        <div className="reply-actions">
+                          <button 
+                            className="cancel-reply-btn"
+                            onClick={() => {
+                              setReplyingTo(null);
+                              setReplyingToReplyId(null);
+                              setParentReplyId(null);
+                              setNewReply({ content: '', image: null });
+                              setReplyImagePreview(null);
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            className="submit-reply-btn"
+                            onClick={() => handleCreateReply(message.id)}
+                          >
+                            Submit
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
