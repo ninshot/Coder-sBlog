@@ -29,6 +29,8 @@ const ChannelDetail = () => {
   const [user, setUser] = useState(null);
   const [messageVotes, setMessageVotes] = useState({});
   const [replyVotes, setReplyVotes] = useState({});
+  const [sortType, setSortType] = useState('date'); // 'date' or 'votes'
+  const [sortOrder, setSortOrder] = useState('desc'); // 'desc' or 'asc'
 
   useEffect(() => {
     fetchChannelDetails();
@@ -491,6 +493,38 @@ const ChannelDetail = () => {
     );
   };
 
+  const handleSortClick = () => {
+    setSortOrder(prevOrder => prevOrder === 'desc' ? 'asc' : 'desc');
+    const sortedMessages = [...messages].sort((a, b) => {
+      if (sortType === 'date') {
+        const dateA = new Date(a.created_at);
+        const dateB = new Date(b.created_at);
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      } else {
+        const votesA = (a.upvotes || 0) - (a.downvotes || 0);
+        const votesB = (b.upvotes || 0) - (b.downvotes || 0);
+        return sortOrder === 'desc' ? votesB - votesA : votesA - votesB;
+      }
+    });
+    setMessages(sortedMessages);
+  };
+
+  const handleSortTypeChange = (e) => {
+    setSortType(e.target.value);
+    const sortedMessages = [...messages].sort((a, b) => {
+      if (e.target.value === 'date') {
+        const dateA = new Date(a.created_at);
+        const dateB = new Date(b.created_at);
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      } else {
+        const votesA = (a.upvotes || 0) - (a.downvotes || 0);
+        const votesB = (b.upvotes || 0) - (b.downvotes || 0);
+        return sortOrder === 'desc' ? votesB - votesA : votesA - votesB;
+      }
+    });
+    setMessages(sortedMessages);
+  };
+
   if (!channel) {
     return <div className="loading">Loading...</div>;
   }
@@ -507,6 +541,22 @@ const ChannelDetail = () => {
           <h1>{channel.name}</h1>
         </div>
         <div className="header-right">
+          <div className="sort-container">
+            <select 
+              value={sortType} 
+              onChange={handleSortTypeChange}
+              className="sort-select"
+            >
+              <option value="date">Date</option>
+              <option value="votes">Votes</option>
+            </select>
+            <button 
+              className="sort-btn"
+              onClick={handleSortClick}
+            >
+              Sort {sortOrder === 'desc' ? '↓' : '↑'}
+            </button>
+          </div>
           <button 
             type="button"
             className="new-message-btn"
