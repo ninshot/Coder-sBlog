@@ -1296,7 +1296,7 @@ app.get('/api/search', checkDatabaseConnection, (req, res) => {
       ) as relevance
     FROM messages m
     JOIN channels c ON m.channel_id = c.id
-    WHERE ${messageConditions}
+    WHERE m.title LIKE ? OR m.content LIKE ?
     
     UNION ALL
     
@@ -1321,7 +1321,7 @@ app.get('/api/search', checkDatabaseConnection, (req, res) => {
     FROM replies r
     JOIN messages m ON r.message_id = m.id
     JOIN channels c ON m.channel_id = c.id
-    WHERE ${replyConditions}
+    WHERE r.content LIKE ?
     
     ORDER BY relevance DESC, created_at DESC
   `;
@@ -1329,12 +1329,16 @@ app.get('/api/search', checkDatabaseConnection, (req, res) => {
   // Prepare parameters for the query
   const searchPattern = `%${cleanedQuery}%`;
   const params = [
-    // Message title and content conditions
-    ...searchTerms.flatMap(term => [`%${term}%`, `%${term}%`]),
-    // Reply content conditions
-    ...searchTerms.map(term => `%${term}%`),
-    // Relevance calculation patterns
-    searchPattern, searchPattern, searchPattern
+    // Message title and content conditions for relevance
+    searchPattern,
+    searchPattern,
+    // Message title and content conditions for WHERE
+    searchPattern,
+    searchPattern,
+    // Reply content condition for relevance
+    searchPattern,
+    // Reply content condition for WHERE
+    searchPattern
   ];
   
   db.query(searchQuery, params, (err, results) => {
