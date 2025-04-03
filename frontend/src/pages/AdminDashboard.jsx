@@ -44,8 +44,11 @@ const AdminDashboard = () => {
       const usersData = await usersRes.json();
       const channelsData = await channelsRes.json();
 
+      // Sort channels by ID in ascending order
+      const sortedChannels = channelsData.sort((a, b) => a.id - b.id);
+
       setUsers(usersData);
-      setChannels(channelsData);
+      setChannels(sortedChannels);
       setLoading(false);
     } catch (err) {
       setError(err.message);

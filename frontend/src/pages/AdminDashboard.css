@@ -4,131 +4,173 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #f5f5f5;
+  background-color: #f8f9fa;
   overflow: auto;
   padding: 20px;
 }
 
 .admin-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  padding: 30px;
 }
 
 .admin-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e9ecef;
 }
 
 .admin-title {
   margin: 0;
-  color: #333;
+  color: #212529;
+  font-size: 1.8rem;
+  font-weight: 600;
 }
 
 .tab-buttons {
   display: flex;
-  gap: 10px;
+  gap: 15px;
 }
 
 .tab-button {
-  padding: 8px 16px;
+  padding: 10px 20px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 500;
   transition: all 0.3s ease;
+  font-size: 1rem;
 }
 
 .tab-button.active {
-  background-color: #4CAF50;
+  background-color: #2196F3;
   color: white;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
 }
 
 .tab-button.inactive {
-  background-color: #f0f0f0;
-  color: #333;
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.tab-button.inactive:hover {
+  background-color: #dee2e6;
 }
 
 .error-message {
   background-color: #ffebee;
   color: #c62828;
-  padding: 10px;
-  border-radius: 4px;
+  padding: 15px;
+  border-radius: 6px;
   margin-bottom: 20px;
+  border-left: 4px solid #c62828;
+  font-weight: 500;
 }
 
 .section-title {
-  color: #333;
-  margin-bottom: 20px;
+  color: #212529;
+  margin-bottom: 25px;
+  font-size: 1.5rem;
+  font-weight: 500;
 }
 
 .table-container {
   overflow-x: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  margin-bottom: 30px;
 }
 
 .admin-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin-top: 20px;
   background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .table-header {
-  background-color: #f5f5f5;
+  background-color: #f8f9fa;
 }
 
 .table-header th {
-  padding: 12px;
+  padding: 15px;
   text-align: left;
-  color: #666;
+  color: #495057;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-bottom: 2px solid #e9ecef;
 }
 
 .table-row {
-  border-bottom: 1px solid #eee;
-  transition: background-color 0.3s ease;
+  border-bottom: 1px solid #e9ecef;
+  transition: background-color 0.2s ease;
+}
+
+.table-row:hover {
+  background-color: #f8f9fa;
 }
 
 .table-row.admin {
-  background-color: #e8f5e9;
+  background-color: #e3f2fd;
 }
 
 .table-cell {
-  padding: 12px;
-  color: #333;
+  padding: 15px;
+  color: #212529;
+  font-size: 0.95rem;
 }
 
 .table-cell.secondary {
-  color: #666;
+  color: #6c757d;
 }
 
 .action-button {
-  padding: 6px 12px;
+  padding: 8px 16px;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 0 4px;
 }
 
 .make-admin-button {
   background-color: #4CAF50;
-  margin-right: 8px;
+}
+
+.make-admin-button:hover {
+  background-color: #43A047;
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
 }
 
 .remove-admin-button {
   background-color: #ff9800;
-  margin-right: 8px;
+}
+
+.remove-admin-button:hover {
+  background-color: #f57c00;
+  box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3);
 }
 
 .delete-button {
   background-color: #f44336;
+}
+
+.delete-button:hover {
+  background-color: #e53935;
+  box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
 }
 
 .delete-button:disabled {
@@ -143,4 +185,42 @@
   display: inline-block;
   text-align: center;
   line-height: 1.5;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.analytics-button:hover {
+  background-color: #1976D2;
+  color: white;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+}
+
+@media (max-width: 768px) {
+  .admin-container {
+    padding: 20px;
+  }
+  
+  .admin-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+  
+  .tab-buttons {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .table-cell {
+    padding: 12px;
+  }
+  
+  .action-button {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
 } 
