@@ -448,7 +448,22 @@ app.get('/api/channels/:channelId/messages', (req, res) => {
               'content', rt.content,
               'image_url', rt.image_url,
               'parent_reply_id', rt.parent_reply_id,
-              'created_at', DATE_FORMAT(rt.created_at, '%Y-%m-%d %H:%i:%s')
+              'created_at', DATE_FORMAT(rt.created_at, '%Y-%m-%d %H:%i:%s'),
+              'replies', (
+                SELECT JSON_ARRAYAGG(
+                  JSON_OBJECT(
+                    'id', child.id,
+                    'user_id', child.user_id,
+                    'displayName', child.displayName,
+                    'content', child.content,
+                    'image_url', child.image_url,
+                    'parent_reply_id', child.parent_reply_id,
+                    'created_at', DATE_FORMAT(child.created_at, '%Y-%m-%d %H:%i:%s')
+                  )
+                )
+                FROM reply_tree child
+                WHERE child.parent_reply_id = rt.id
+              )
             )
           )
           FROM reply_tree rt
@@ -468,36 +483,7 @@ app.get('/api/channels/:channelId/messages', (req, res) => {
       return;
     }
     
-    // Process the results to build the nested structure
-    const messages = results.map(message => {
-      if (message.replies && message.replies.length > 0) {
-        // Create a map of all replies for quick lookup
-        const replyMap = new Map();
-        message.replies.forEach(reply => {
-          replyMap.set(reply.id, { ...reply, replies: [] });
-        });
-
-        // Organize replies into a tree structure
-        const organizedReplies = [];
-        message.replies.forEach(reply => {
-          if (reply.parent_reply_id) {
-            // This is a nested reply, find its parent and add it
-            const parentReply = replyMap.get(reply.parent_reply_id);
-            if (parentReply) {
-              parentReply.replies.push(replyMap.get(reply.id));
-            }
-          } else {
-            // This is a top-level reply
-            organizedReplies.push(replyMap.get(reply.id));
-          }
-        });
-
-        return { ...message, replies: organizedReplies };
-      }
-      return message;
-    });
-    
-    res.json(messages);
+    res.json(results);
   });
 });
 
