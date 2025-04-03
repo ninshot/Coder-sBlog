@@ -1524,7 +1524,7 @@ app.post('/api/replies/:replyId/dislike', authenticateToken, (req, res) => {
 // Search Routes
 // Search messages and replies
 app.get('/api/search', checkDatabaseConnection, (req, res) => {
-  const { query } = req.query;
+  const { query, sort = 'relevance' } = req.query;
   
   if (!query || query.trim() === '') {
     return res.status(400).json({ message: 'Search query is required' });
@@ -1546,6 +1546,27 @@ app.get('/api/search', checkDatabaseConnection, (req, res) => {
   const replyConditions = searchTerms.map(term => 
     `(r.content LIKE ?)`
   ).join(' AND ');
+
+  // Determine the ORDER BY clause based on sort parameter
+  let orderByClause;
+  switch (sort) {
+    case 'upvotes':
+      orderByClause = '(upvotes - downvotes) DESC, created_at DESC';
+      break;
+    case 'downvotes':
+      orderByClause = 'downvotes DESC, created_at DESC';
+      break;
+    case 'date_asc':
+      orderByClause = 'created_at DESC';
+      break;
+    case 'date_desc':
+      orderByClause = 'created_at ASC';
+      break;
+    case 'relevance':
+    default:
+      orderByClause = 'relevance DESC, created_at DESC';
+      break;
+  }
 
   const searchQuery = `
     SELECT 
@@ -1596,7 +1617,7 @@ app.get('/api/search', checkDatabaseConnection, (req, res) => {
     JOIN channels c ON m.channel_id = c.id
     WHERE r.content LIKE ?
     
-    ORDER BY relevance DESC, created_at DESC
+    ORDER BY ${orderByClause}
   `;
 
   // Prepare parameters for the query

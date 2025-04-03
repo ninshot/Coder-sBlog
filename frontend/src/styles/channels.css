@@ -48,7 +48,7 @@
 .sort-select {
   background-color: black;
   color: white;
-  border: none;
+  border: 1px solid black;
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 0.95rem;
@@ -75,7 +75,7 @@
 .sort-btn {
   background-color: black;
   color: white;
-  border: none;
+  border: 1px solid black;
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 0.95rem;

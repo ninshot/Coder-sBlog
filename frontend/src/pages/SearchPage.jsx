@@ -6,6 +6,7 @@ const SearchPage = () => {
   const [searchType, setSearchType] = useState('content'); // 'content', 'users', or 'channels'
   const [searchQuery, setSearchQuery] = useState('');
   const [sortType, setSortType] = useState('most'); // 'most' or 'least'
+  const [contentSortType, setContentSortType] = useState('relevance'); // 'relevance', 'upvotes', or 'date'
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,7 +31,7 @@ const SearchPage = () => {
       let url;
       
       if (searchType === 'content') {
-        url = `http://localhost:8000/api/search?q=${encodeURIComponent(query)}`;
+        url = `http://localhost:8000/api/search?query=${encodeURIComponent(query)}&sort=${contentSortType}`;
       } else if (searchType === 'users') {
         url = `http://localhost:8000/api/search/user-posts?sort=${sortType}`;
       } else if (searchType === 'channels') {
@@ -48,7 +49,7 @@ const SearchPage = () => {
       }
 
       const data = await response.json();
-      setResults(searchType === 'content' ? data.results : 
+      setResults(searchType === 'content' ? data : 
                 searchType === 'users' ? data.users : 
                 data.channels);
     } catch (err) {
@@ -75,6 +76,13 @@ const SearchPage = () => {
   const handleSortChange = (e) => {
     setSortType(e.target.value);
     if (searchType !== 'content') {
+      performSearch();
+    }
+  };
+
+  const handleContentSortChange = (e) => {
+    setContentSortType(e.target.value);
+    if (searchType === 'content') {
       performSearch();
     }
   };
@@ -179,13 +187,26 @@ const SearchPage = () => {
           </select>
 
           {searchType === 'content' ? (
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search messages and replies..."
-              className="search-input"
-            />
+            <>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search messages and replies..."
+                className="search-input"
+              />
+              <select
+                value={contentSortType}
+                onChange={handleContentSortChange}
+                className="search-input"
+              >
+                <option value="relevance">Sort by Relevance</option>
+                <option value="upvotes">Sort by Upvotes</option>
+                <option value="downvotes">Sort by Downvotes</option>
+                <option value="date_desc">Sort by Date (Newest First)</option>
+                <option value="date_asc">Sort by Date (Oldest First)</option>
+              </select>
+            </>
           ) : (
             <select
               value={sortType}
