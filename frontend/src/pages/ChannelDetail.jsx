@@ -407,7 +407,7 @@ const ChannelDetail = () => {
               </div>
             </div>
             <div className="message-content">
-              <p>{message.content}</p>
+              {message.content}
               {message.image_url && (
                 <div className="message-image">
                   <img src={`http://localhost:8000${message.image_url}`} alt="Message attachment" />
@@ -472,192 +472,143 @@ const ChannelDetail = () => {
             )}
 
             {message.replies && message.replies.length > 0 && (
-              <div className="replies-section">
-                {message.replies.map((reply) => (
-                  <div key={reply.id} className="reply-card">
-                    <div className="reply-user-info">
-                      <div className="reply-user-details">
-                        <span className="reply-username" style={{ fontWeight: 'bold' }}>{reply.displayName || 'Anonymous'}</span>
-                        <div className="reply-content">{reply.content}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <span className="reply-date">
-                          {new Date(reply.created_at + 'Z').toLocaleString('en-US', { 
-                            timeZone: 'America/Regina',
-                            hour12: true,
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </span>
-                        <button 
-                          onClick={() => handleReplyClick(message, reply.id)}
-                          className="reply-btn"
-                        >
-                          Reply
-                        </button>
-                        {(user?.isAdmin || reply.user_id === user?.id) && (
+              <>
+                <div className="replies-header">Replies</div>
+                <div className="replies-section">
+                  {message.replies.map((reply) => (
+                    <div key={reply.id} className="reply-card">
+                      <div className="reply-user-info">
+                        <div className="reply-user-details">
+                          <span className="reply-username" style={{ fontWeight: 'bold' }}>{reply.displayName || 'Anonymous'}</span>
+                          <div className="reply-content">{reply.content}</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <span className="reply-date">
+                            {new Date(reply.created_at + 'Z').toLocaleString('en-US', { 
+                              timeZone: 'America/Regina',
+                              hour12: true,
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </span>
                           <button 
-                            onClick={() => handleDeleteReply(reply.id)}
-                            className="delete-reply-btn"
+                            onClick={() => handleReplyClick(message, reply.id)}
+                            className="reply-btn"
                           >
-                            Delete Reply
+                            Reply
                           </button>
-                        )}
-                      </div>
-                    </div>
-                    {reply.image_url && (
-                      <div className="reply-image">
-                        <img src={`http://localhost:8000${reply.image_url}`} alt="Reply attachment" />
-                      </div>
-                    )}
-                    {replyingToReplyId === reply.id && (
-                      <div className="reply-section" style={{ marginTop: '1rem' }}>
-                        <textarea
-                          value={newReply.content}
-                          onChange={(e) => setNewReply({ ...newReply, content: e.target.value })}
-                          placeholder="Write your reply..."
-                          className="reply-textarea"
-                        />
-                        <div className="form-group">
-                          <label htmlFor="replyImage" className="file-input-label">
-                            Upload Image
-                            <input
-                              type="file"
-                              id="replyImage"
-                              name="image"
-                              accept="image/*"
-                              onChange={(e) => handleImageChange(e, 'reply')}
-                              className="file-input"
-                            />
-                          </label>
-                          {replyImagePreview && (
-                            <div className="image-preview">
-                              <img src={replyImagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }} />
-                            </div>
+                          {(user?.isAdmin || reply.user_id === user?.id) && (
+                            <button 
+                              onClick={() => handleDeleteReply(reply.id)}
+                              className="delete-reply-btn"
+                            >
+                              Delete Reply
+                            </button>
                           )}
                         </div>
-                        <div className="reply-actions">
-                          <button 
-                            className="cancel-reply-btn"
-                            onClick={() => {
-                              setReplyingTo(null);
-                              setReplyingToReplyId(null);
-                              setParentReplyId(null);
-                              setNewReply({ content: '', image: null });
-                              setReplyImagePreview(null);
-                            }}
-                          >
-                            Cancel
-                          </button>
-                          <button 
-                            className="submit-reply-btn"
-                            onClick={() => handleCreateReply(message.id)}
-                          >
-                            Submit
-                          </button>
-                        </div>
                       </div>
-                    )}
-                    {reply.replies && reply.replies.length > 0 && (
-                      <div className="nested-replies-section">
-                        {reply.replies.map((nestedReply) => (
-                          <div key={nestedReply.id} className="nested-reply-item">
-                            <div className="nested-reply-user-info">
-                              <div className="nested-reply-user-details">
-                                <span className="nested-reply-username">{nestedReply.displayName || 'Anonymous'}</span>
-                                <div className="nested-reply-content">{nestedReply.content}</div>
-                              </div>
-                              <div className="nested-reply-actions">
-                                <span className="nested-reply-date">
-                                  {new Date(nestedReply.created_at + 'Z').toLocaleString('en-US', { 
-                                    timeZone: 'America/Regina',
-                                    hour12: true,
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    month: 'short',
-                                    day: 'numeric',
-                                    year: 'numeric'
-                                  })}
-                                </span>
-                                <button 
-                                  onClick={() => handleReplyClick(message, nestedReply.id)}
-                                  className="reply-btn"
-                                >
-                                  Reply
-                                </button>
-                                {(user?.isAdmin || nestedReply.user_id === user?.id) && (
-                                  <button 
-                                    onClick={() => handleDeleteReply(nestedReply.id)}
-                                    className="delete-reply-btn"
-                                  >
-                                    Delete Reply
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                            {nestedReply.image_url && (
-                              <div className="reply-image">
-                                <img src={`http://localhost:8000${nestedReply.image_url}`} alt="Reply attachment" />
-                              </div>
-                            )}
-                            {replyingToReplyId === nestedReply.id && (
-                              <div className="reply-section">
-                                <textarea
-                                  value={newReply.content}
-                                  onChange={(e) => setNewReply({ ...newReply, content: e.target.value })}
-                                  placeholder="Write your reply..."
-                                  className="reply-textarea"
-                                />
-                                <div className="form-group">
-                                  <label htmlFor="replyImage" className="file-input-label">
-                                    Upload Image
-                                    <input
-                                      type="file"
-                                      id="replyImage"
-                                      name="image"
-                                      accept="image/*"
-                                      onChange={(e) => handleImageChange(e, 'reply')}
-                                      className="file-input"
-                                    />
-                                  </label>
-                                  {replyImagePreview && (
-                                    <div className="image-preview">
-                                      <img src={replyImagePreview} alt="Preview" />
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="reply-actions">
-                                  <button 
-                                    className="cancel-reply-btn"
-                                    onClick={() => {
-                                      setReplyingTo(null);
-                                      setReplyingToReplyId(null);
-                                      setParentReplyId(null);
-                                      setNewReply({ content: '', image: null });
-                                      setReplyImagePreview(null);
-                                    }}
-                                  >
-                                    Cancel
-                                  </button>
-                                  <button 
-                                    className="submit-reply-btn"
-                                    onClick={() => handleCreateReply(message.id)}
-                                  >
-                                    Submit
-                                  </button>
-                                </div>
+                      {reply.image_url && (
+                        <div className="reply-image">
+                          <img src={`http://localhost:8000${reply.image_url}`} alt="Reply attachment" />
+                        </div>
+                      )}
+                      {replyingToReplyId === reply.id && (
+                        <div className="reply-section" style={{ marginTop: '1rem' }}>
+                          <textarea
+                            value={newReply.content}
+                            onChange={(e) => setNewReply({ ...newReply, content: e.target.value })}
+                            placeholder="Write your reply..."
+                            className="reply-textarea"
+                          />
+                          <div className="form-group">
+                            <label htmlFor="replyImage" className="file-input-label">
+                              Upload Image
+                              <input
+                                type="file"
+                                id="replyImage"
+                                name="image"
+                                accept="image/*"
+                                onChange={(e) => handleImageChange(e, 'reply')}
+                                className="file-input"
+                              />
+                            </label>
+                            {replyImagePreview && (
+                              <div className="image-preview">
+                                <img src={replyImagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', objectFit: 'contain' }} />
                               </div>
                             )}
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                          <div className="reply-actions">
+                            <button 
+                              className="cancel-reply-btn"
+                              onClick={() => {
+                                setReplyingTo(null);
+                                setReplyingToReplyId(null);
+                                setParentReplyId(null);
+                                setNewReply({ content: '', image: null });
+                                setReplyImagePreview(null);
+                              }}
+                            >
+                              Cancel
+                            </button>
+                            <button 
+                              className="submit-reply-btn"
+                              onClick={() => handleCreateReply(message.id)}
+                            >
+                              Submit
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {reply.replies && reply.replies.length > 0 && (
+                        <div className="nested-replies-section">
+                          {reply.replies.map((nestedReply) => (
+                            <div key={nestedReply.id} className="nested-reply-item">
+                              <div className="nested-reply-user-info">
+                                <div className="nested-reply-user-details">
+                                  <span className="nested-reply-username">{nestedReply.displayName}</span>
+                                  <span className="nested-reply-date">
+                                    {new Date(nestedReply.created_at + 'Z').toLocaleString('en-US', { 
+                                      timeZone: 'America/Regina',
+                                      hour12: true,
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                    })}
+                                  </span>
+                                </div>
+                                {nestedReply.user_id === user?.id && (
+                                  <div className="nested-reply-actions">
+                                    <button
+                                      className="delete-reply-btn"
+                                      onClick={() => handleDeleteReply(nestedReply.id)}
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="nested-reply-content">
+                                {nestedReply.content}
+                                {nestedReply.image_url && (
+                                  <div className="reply-image">
+                                    <img src={nestedReply.image_url} alt="Reply attachment" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         ))}

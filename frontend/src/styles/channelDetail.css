@@ -153,11 +153,12 @@
 }
 
 .message-actions {
+  margin-top: 15px;
+  padding-top: 15px;
   display: flex;
   justify-content: flex-end;
   width: 100%;
   height: 100%;
-  margin-top: 10px;
   gap: 10px;
 }
 
@@ -546,39 +547,7 @@
 }
 
 .nested-reply-item .reply-btn {
-  padding: 8px 16px;
-  background-color: black;
-  color: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.3s ease;
-}
-
-.nested-reply-item .reply-btn:hover {
-  background-color: #f5f5f5;
-  border-color: #999;
-  color: black;
-  transform: translateY(-1px);
-}
-
-.nested-reply-item .delete-reply-btn {padding: 0.5rem;
-  background: red;
-  color: white;
-  border: 2px solid red;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  min-width: 100px;
-  text-align: center;
-}
-
-.nested-reply-item .delete-reply-btn:hover {
-  background: white;
-  color: red;
-  border: 2px solid red;
+  display: none;
 }
 
 /* Delete Button Styles */
@@ -636,4 +605,13 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.replies-header {
+  margin-top: 20px;
+  padding: 10px 0;
+  border-top: 1px solid #eee;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #333;
 } 
