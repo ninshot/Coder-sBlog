@@ -1829,6 +1829,108 @@ app.get('/api/search/users', checkDatabaseConnection, (req, res) => {
   }
 });
 
+// Get user analytics
+app.get('/api/users/:userId/analytics', authenticateToken, async (req, res) => {
+  try {
+    const connection = await createConnection();
+    const userId = req.params.userId;
+
+    // Get user's basic info and registration date
+    const userQuery = `
+      SELECT 
+        id,
+        username,
+        displayName,
+        created_at as registration_date
+      FROM users
+      WHERE id = ?
+    `;
+
+    // Get total messages count
+    const messagesQuery = `
+      SELECT COUNT(*) as total_messages
+      FROM messages
+      WHERE user_id = ?
+    `;
+
+    // Get total replies count
+    const repliesQuery = `
+      SELECT COUNT(*) as total_replies
+      FROM replies
+      WHERE user_id = ?
+    `;
+
+    // Get channels the user has posted in
+    const channelsQuery = `
+      SELECT DISTINCT c.id, c.name
+      FROM channels c
+      JOIN messages m ON c.id = m.channel_id
+      WHERE m.user_id = ?
+      UNION
+      SELECT DISTINCT c.id, c.name
+      FROM channels c
+      JOIN messages m ON c.id = m.channel_id
+      JOIN replies r ON m.id = r.message_id
+      WHERE r.user_id = ?
+    `;
+
+    // Execute all queries in parallel
+    const [userResults, messagesResults, repliesResults, channelsResults] = await Promise.all([
+      new Promise((resolve, reject) => {
+        connection.query(userQuery, [userId], (err, results) => {
+          if (err) reject(err);
+          else resolve(results[0]);
+        });
+      }),
+      new Promise((resolve, reject) => {
+        connection.query(messagesQuery, [userId], (err, results) => {
+          if (err) reject(err);
+          else resolve(results[0]);
+        });
+      }),
+      new Promise((resolve, reject) => {
+        connection.query(repliesQuery, [userId], (err, results) => {
+          if (err) reject(err);
+          else resolve(results[0]);
+        });
+      }),
+      new Promise((resolve, reject) => {
+        connection.query(channelsQuery, [userId, userId], (err, results) => {
+          if (err) reject(err);
+          else resolve(results);
+        });
+      })
+    ]);
+
+    connection.end();
+
+    // Format the response
+    const analytics = {
+      user: {
+        id: userResults.id,
+        username: userResults.username,
+        displayName: userResults.displayName,
+        registrationDate: userResults.registration_date
+      },
+      statistics: {
+        totalMessages: parseInt(messagesResults.total_messages),
+        totalReplies: parseInt(repliesResults.total_replies),
+        totalPosts: parseInt(messagesResults.total_messages) + parseInt(repliesResults.total_replies),
+        activeChannels: channelsResults.length,
+        channels: channelsResults.map(channel => ({
+          id: channel.id,
+          name: channel.name
+        }))
+      }
+    };
+
+    res.json(analytics);
+  } catch (error) {
+    console.error('Error fetching user analytics:', error);
+    res.status(500).json({ error: 'Error fetching user analytics' });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
