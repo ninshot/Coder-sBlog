@@ -229,6 +229,7 @@ function createTables(connection) {
         password VARCHAR(255) NOT NULL,
         displayName VARCHAR(255) NOT NULL,
         isAdmin BOOLEAN DEFAULT FALSE,
+        post_count INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `, (err) => {
@@ -238,6 +239,41 @@ function createTables(connection) {
         return;
       }
       console.log('Users table created or already exists');
+
+      // Add post_count column if it doesn't exist
+      connection.query(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'users' 
+        AND COLUMN_NAME = 'post_count'
+      `, (err, results) => {
+        if (err) {
+          console.error('Error checking for post_count column:', err);
+          reject(err);
+          return;
+        }
+
+        if (results.length === 0) {
+          connection.query(`
+            ALTER TABLE users 
+            ADD COLUMN post_count INT DEFAULT 0
+          `, (err) => {
+            if (err) {
+              console.error('Error adding post_count column:', err);
+              reject(err);
+              return;
+            }
+            console.log('Added post_count column to users table');
+            // Initialize post counts for existing users
+            updateAllUserPostCounts(connection)
+              .then(() => resolve())
+              .catch(err => reject(err));
+          });
+        } else {
+          console.log('post_count column already exists in users table');
+          resolve();
+        }
+      });
     });
 
     // Create admin account if it doesn't exist
@@ -254,6 +290,58 @@ function createTables(connection) {
       }
       console.log('Admin account created or already exists');
       resolve();
+    });
+  });
+}
+
+// Function to update post count for a specific user
+async function updateUserPostCount(connection, userId) {
+  return new Promise((resolve, reject) => {
+    const query = `
+      UPDATE users u
+      SET post_count = (
+        SELECT COUNT(*) FROM (
+          SELECT id FROM messages WHERE user_id = ?
+          UNION ALL
+          SELECT id FROM replies WHERE user_id = ?
+        ) AS combined_posts
+      )
+      WHERE u.id = ?
+    `;
+    
+    connection.query(query, [userId, userId, userId], (err, result) => {
+      if (err) {
+        console.error('Error updating post count:', err);
+        reject(err);
+        return;
+      }
+      resolve(result);
+    });
+  });
+}
+
+// Function to update post counts for all users
+async function updateAllUserPostCounts(connection) {
+  return new Promise((resolve, reject) => {
+    const query = `
+      UPDATE users u
+      SET post_count = (
+        SELECT COUNT(*) FROM (
+          SELECT id FROM messages WHERE user_id = u.id
+          UNION ALL
+          SELECT id FROM replies WHERE user_id = u.id
+        ) AS combined_posts
+      )
+    `;
+    
+    connection.query(query, (err, result) => {
+      if (err) {
+        console.error('Error updating all post counts:', err);
+        reject(err);
+        return;
+      }
+      console.log('Updated post counts for all users');
+      resolve(result);
     });
   });
 }
@@ -1356,6 +1444,47 @@ app.get('/api/search', checkDatabaseConnection, (req, res) => {
     
     res.json(formattedResults);
   });
+});
+
+// Search for users with most/least posts
+app.get('/api/search/user-posts', async (req, res) => {
+  try {
+    const connection = await createConnection();
+    const { sort = 'most' } = req.query; // 'most' or 'least'
+
+    const query = `
+      SELECT 
+        id,
+        displayName,
+        username,
+        post_count as total_posts
+      FROM users
+      WHERE post_count > 0
+      ORDER BY post_count ${sort === 'most' ? 'DESC' : 'ASC'}
+      LIMIT 10
+    `;
+
+    connection.query(query, (err, results) => {
+      connection.end();
+      
+      if (err) {
+        console.error('Error searching user posts:', err);
+        return res.status(500).json({ error: 'Error searching user posts' });
+      }
+
+      res.json({
+        users: results.map(user => ({
+          id: user.id,
+          displayName: user.displayName,
+          username: user.username,
+          totalPosts: user.total_posts
+        }))
+      });
+    });
+  } catch (error) {
+    console.error('Error in user posts search:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Error handling middleware
