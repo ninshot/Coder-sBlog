@@ -8,12 +8,15 @@
 }
 
 .bookmarks-header {
-  width: 100vm;
+  width: 100vw;
   background-color: white;
   padding-top: 2rem;
   padding-bottom: 1rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .bookmarks-title {
@@ -24,4 +27,67 @@
   font-size: 2.5rem;
   color: #333;
   margin: 0;
+}
+
+.bookmarks-list {
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.bookmarks-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid black;
+  margin: 0 20px;
+  width: calc(100% - 40px);
+  box-sizing: border-box;
+}
+
+.bookmark-message {
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid #eee;
+}
+
+.bookmark-message:last-child {
+  border-bottom: none;
+}
+
+.bookmark-message:hover {
+  background-color: #f9f9f9;
+}
+
+.bookmark-message h3 {
+  color: #333;
+  margin: 0 0 10px 0;
+  font-size: 1.2rem;
+}
+
+.bookmark-message p {
+  color: #666;
+  margin: 0 0 15px 0;
+  line-height: 1.5;
+}
+
+.bookmark-meta {
+  display: flex;
+  gap: 15px;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.bookmark-meta span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.no-bookmarks {
+  text-align: center;
+  color: #666;
+  font-size: 1.1rem;
+  margin-top: 2rem;
 } 

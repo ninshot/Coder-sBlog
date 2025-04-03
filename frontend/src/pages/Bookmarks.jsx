@@ -46,35 +46,29 @@ const Bookmarks = () => {
           <h1>My Bookmarks</h1>
         </div>
       </div>
-      {bookmarks.length === 0 ? (
-        <p>No bookmarked messages yet.</p>
-      ) : (
-        <div>
-          {bookmarks.map((message) => (
-            <div 
-              key={message.id} 
-              onClick={() => handleMessageClick(message.channel_id, message.id)}
-              style={{ 
-                cursor: 'pointer',
-                padding: '10px',
-                margin: '10px 0',
-                border: '1px solid #ccc',
-                borderRadius: '4px'
-              }}
-            >
-              <h3>{message.title}</h3>
-              <p>{message.content}</p>
-              <div>
-                <span>Channel: {message.channelName}</span>
-                <span> | </span>
-                <span>Author: {message.authorName}</span>
-                <span> | </span>
-                <span>Date: {new Date(message.created_at).toLocaleString()}</span>
+      <div className="bookmarks-list">
+        {bookmarks.length === 0 ? (
+          <p className="no-bookmarks">No bookmarked messages yet.</p>
+        ) : (
+          <div className="bookmarks-container">
+            {bookmarks.map((message) => (
+              <div 
+                key={message.id} 
+                className="bookmark-message"
+                onClick={() => handleMessageClick(message.channel_id, message.id)}
+              >
+                <h3>{message.title}</h3>
+                <p>{message.content}</p>
+                <div className="bookmark-meta">
+                  <span>Channel: {message.channelName}</span>
+                  <span>Author: {message.authorName}</span>
+                  <span>Date: {new Date(message.created_at).toLocaleString()}</span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
