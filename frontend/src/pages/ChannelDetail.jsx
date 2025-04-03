@@ -385,20 +385,39 @@ const ChannelDetail = () => {
 
   const handleVote = async (id, type, isMessage = true) => {
     try {
+      // Check if user is logged in
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please log in to vote');
+        setTimeout(() => setError(null), 3000);
+        return;
+      }
+
+      // Make the vote API call
       if (isMessage) {
         await voteMessage(id, type);
-        const { data } = await getMessageVoteStatus(id);
-        setMessageVotes(prev => ({ ...prev, [id]: data.voteType }));
       } else {
         await voteReply(id, type);
-        const { data } = await getReplyVoteStatus(id);
+      }
+
+      // Get the updated vote status
+      const { data } = isMessage ? 
+        await getMessageVoteStatus(id) : 
+        await getReplyVoteStatus(id);
+
+      // Update the vote status in state
+      if (isMessage) {
+        setMessageVotes(prev => ({ ...prev, [id]: data.voteType }));
+      } else {
         setReplyVotes(prev => ({ ...prev, [id]: data.voteType }));
       }
-      // Refresh messages to update vote counts
-      fetchMessages();
+
+      // Fetch messages to get updated vote counts
+      await fetchMessages();
     } catch (error) {
       console.error('Error voting:', error);
-      setError(error.message);
+      setError(error.message || 'Error voting. Please try again.');
+      setTimeout(() => setError(null), 3000);
     }
   };
 
@@ -446,6 +465,20 @@ const ChannelDetail = () => {
                     <img src={`http://localhost:8000${nestedReply.image_url}`} alt="Reply attachment" />
                   </div>
                 )}
+              </div>
+              <div className="vote-buttons">
+                <button 
+                  className={`vote-btn upvote ${replyVotes[nestedReply.id] === 'upvote' ? 'active' : ''}`}
+                  onClick={() => handleVote(nestedReply.id, 'upvote', false)}
+                >
+                  ↑ {nestedReply.upvotes || 0}
+                </button>
+                <button 
+                  className={`vote-btn downvote ${replyVotes[nestedReply.id] === 'downvote' ? 'active' : ''}`}
+                  onClick={() => handleVote(nestedReply.id, 'downvote', false)}
+                >
+                  ↓ {nestedReply.downvotes || 0}
+                </button>
               </div>
               {/* Recursively render nested replies */}
               {nestedReply.replies && nestedReply.replies.length > 0 && (

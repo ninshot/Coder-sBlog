@@ -441,6 +441,8 @@ app.get('/api/channels/:channelId/messages', (req, res) => {
         image_url, 
         parent_reply_id,
         created_at,
+        upvotes,
+        downvotes,
         0 as level
       FROM replies 
       WHERE message_id IN (
@@ -459,6 +461,8 @@ app.get('/api/channels/:channelId/messages', (req, res) => {
         r.image_url, 
         r.parent_reply_id,
         r.created_at,
+        r.upvotes,
+        r.downvotes,
         rt.level + 1
       FROM replies r
       JOIN reply_tree rt ON r.parent_reply_id = rt.id
@@ -477,6 +481,8 @@ app.get('/api/channels/:channelId/messages', (req, res) => {
               'image_url', rt.image_url,
               'parent_reply_id', rt.parent_reply_id,
               'created_at', DATE_FORMAT(rt.created_at, '%Y-%m-%d %H:%i:%s'),
+              'upvotes', rt.upvotes,
+              'downvotes', rt.downvotes,
               'replies', (
                 SELECT JSON_ARRAYAGG(
                   JSON_OBJECT(
@@ -486,7 +492,9 @@ app.get('/api/channels/:channelId/messages', (req, res) => {
                     'content', child.content,
                     'image_url', child.image_url,
                     'parent_reply_id', child.parent_reply_id,
-                    'created_at', DATE_FORMAT(child.created_at, '%Y-%m-%d %H:%i:%s')
+                    'created_at', DATE_FORMAT(child.created_at, '%Y-%m-%d %H:%i:%s'),
+                    'upvotes', child.upvotes,
+                    'downvotes', child.downvotes
                   )
                 )
                 FROM reply_tree child
@@ -592,6 +600,8 @@ app.get('/api/messages/:messageId/replies', (req, res) => {
         image_url, 
         parent_reply_id,
         created_at,
+        upvotes,
+        downvotes,
         0 as level
       FROM replies 
       WHERE message_id = ? AND parent_reply_id IS NULL
@@ -608,6 +618,8 @@ app.get('/api/messages/:messageId/replies', (req, res) => {
         r.image_url, 
         r.parent_reply_id,
         r.created_at,
+        r.upvotes,
+        r.downvotes,
         rt.level + 1
       FROM replies r
       JOIN reply_tree rt ON r.parent_reply_id = rt.id
@@ -1044,14 +1056,33 @@ app.post('/api/replies/:replyId/vote', authenticateToken, (req, res) => {
     const checkVoteQuery = 'SELECT vote_type FROM votes WHERE user_id = ? AND reply_id = ?';
     db.query(checkVoteQuery, [userId, replyId], (err, results) => {
       if (err) {
-        db.rollback(() => {
+        return db.rollback(() => {
           res.status(500).json({ error: err.message });
         });
-        return;
       }
+
+      const handleTransaction = (query, params, successMessage) => {
+        db.query(query, params, (err) => {
+          if (err) {
+            return db.rollback(() => {
+              res.status(500).json({ error: err.message });
+            });
+          }
+
+          db.commit((err) => {
+            if (err) {
+              return db.rollback(() => {
+                res.status(500).json({ error: err.message });
+              });
+            }
+            res.json({ message: successMessage });
+          });
+        });
+      };
 
       if (results.length > 0) {
         const previousVote = results[0].vote_type;
+        
         if (previousVote === voteType) {
           // Remove the vote if clicking the same button again
           const removeVoteQuery = 'DELETE FROM votes WHERE user_id = ? AND reply_id = ?';
@@ -1063,30 +1094,12 @@ app.post('/api/replies/:replyId/vote', authenticateToken, (req, res) => {
 
           db.query(removeVoteQuery, [userId, replyId], (err) => {
             if (err) {
-              db.rollback(() => {
+              return db.rollback(() => {
                 res.status(500).json({ error: err.message });
               });
-              return;
             }
 
-            db.query(updateCountQuery, [replyId], (err) => {
-              if (err) {
-                db.rollback(() => {
-                  res.status(500).json({ error: err.message });
-                });
-                return;
-              }
-
-              db.commit((err) => {
-                if (err) {
-                  db.rollback(() => {
-                    res.status(500).json({ error: err.message });
-                  });
-                  return;
-                }
-                res.json({ message: 'Vote removed successfully' });
-              });
-            });
+            handleTransaction(updateCountQuery, [replyId], 'Vote removed successfully');
           });
         } else {
           // Change vote type
@@ -1100,30 +1113,12 @@ app.post('/api/replies/:replyId/vote', authenticateToken, (req, res) => {
 
           db.query(updateVoteQuery, [voteType, userId, replyId], (err) => {
             if (err) {
-              db.rollback(() => {
+              return db.rollback(() => {
                 res.status(500).json({ error: err.message });
               });
-              return;
             }
 
-            db.query(updateCountQuery, [replyId], (err) => {
-              if (err) {
-                db.rollback(() => {
-                  res.status(500).json({ error: err.message });
-                });
-                return;
-              }
-
-              db.commit((err) => {
-                if (err) {
-                  db.rollback(() => {
-                    res.status(500).json({ error: err.message });
-                  });
-                  return;
-                }
-                res.json({ message: 'Vote updated successfully' });
-              });
-            });
+            handleTransaction(updateCountQuery, [replyId], 'Vote updated successfully');
           });
         }
       } else {
@@ -1137,30 +1132,12 @@ app.post('/api/replies/:replyId/vote', authenticateToken, (req, res) => {
 
         db.query(addVoteQuery, [userId, replyId, voteType], (err) => {
           if (err) {
-            db.rollback(() => {
+            return db.rollback(() => {
               res.status(500).json({ error: err.message });
             });
-            return;
           }
 
-          db.query(updateCountQuery, [replyId], (err) => {
-            if (err) {
-              db.rollback(() => {
-                res.status(500).json({ error: err.message });
-              });
-              return;
-            }
-
-            db.commit((err) => {
-              if (err) {
-                db.rollback(() => {
-                  res.status(500).json({ error: err.message });
-                });
-                return;
-              }
-              res.json({ message: 'Vote added successfully' });
-            });
-          });
+          handleTransaction(updateCountQuery, [replyId], 'Vote added successfully');
         });
       }
     });
