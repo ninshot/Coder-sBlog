@@ -1705,6 +1705,51 @@ app.get('/api/channels/sorted/date', authenticateToken, async (req, res) => {
   }
 });
 
+// Search for channels with most/least posts
+app.get('/api/search/channel-posts', async (req, res) => {
+  try {
+    const connection = await createConnection();
+    const { sort = 'most' } = req.query; // 'most' or 'least'
+
+    const query = `
+      SELECT 
+        c.id,
+        c.name,
+        c.description,
+        c.member_count,
+        COUNT(m.id) as total_posts
+      FROM channels c
+      LEFT JOIN messages m ON c.id = m.channel_id
+      GROUP BY c.id
+      HAVING total_posts > 0
+      ORDER BY total_posts ${sort === 'most' ? 'DESC' : 'ASC'}
+      LIMIT 10
+    `;
+
+    connection.query(query, (err, results) => {
+      connection.end();
+      
+      if (err) {
+        console.error('Error searching channel posts:', err);
+        return res.status(500).json({ error: 'Error searching channel posts' });
+      }
+
+      res.json({
+        channels: results.map(channel => ({
+          id: channel.id,
+          name: channel.name,
+          description: channel.description,
+          memberCount: channel.member_count,
+          totalPosts: channel.total_posts
+        }))
+      });
+    });
+  } catch (error) {
+    console.error('Error in channel posts search:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

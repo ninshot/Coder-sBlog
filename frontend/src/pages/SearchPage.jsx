@@ -3,9 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import '../styles/searchPage.css';
 
 const SearchPage = () => {
-  const [searchType, setSearchType] = useState('content'); // 'content' or 'users'
+  const [searchType, setSearchType] = useState('content'); // 'content', 'users', or 'channels'
   const [searchQuery, setSearchQuery] = useState('');
-  const [userSortType, setUserSortType] = useState('most'); // 'most' or 'least'
+  const [sortType, setSortType] = useState('most'); // 'most' or 'least'
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -31,9 +31,10 @@ const SearchPage = () => {
       
       if (searchType === 'content') {
         url = `http://localhost:8000/api/search?q=${encodeURIComponent(query)}`;
-      } else {
-        // For user search by post count
-        url = `http://localhost:8000/api/search/user-posts?sort=${userSortType}`;
+      } else if (searchType === 'users') {
+        url = `http://localhost:8000/api/search/user-posts?sort=${sortType}`;
+      } else if (searchType === 'channels') {
+        url = `http://localhost:8000/api/search/channel-posts?sort=${sortType}`;
       }
 
       const response = await fetch(url, {
@@ -47,7 +48,9 @@ const SearchPage = () => {
       }
 
       const data = await response.json();
-      setResults(searchType === 'content' ? data.results : data.users);
+      setResults(searchType === 'content' ? data.results : 
+                searchType === 'users' ? data.users : 
+                data.channels);
     } catch (err) {
       setError(err.message);
       console.error('Search error:', err);
@@ -62,22 +65,22 @@ const SearchPage = () => {
   };
 
   const handleResultClick = (result) => {
-    navigate(`/channels/${result.channel_id}`);
+    if (searchType === 'content') {
+      navigate(`/channels/${result.channel_id}`);
+    } else if (searchType === 'channels') {
+      navigate(`/channels/${result.id}`);
+    }
   };
 
-  // Handle sort type change
   const handleSortChange = (e) => {
-    setUserSortType(e.target.value);
-    // Trigger search immediately when sort type changes
-    if (searchType === 'users') {
+    setSortType(e.target.value);
+    if (searchType !== 'content') {
       performSearch();
     }
   };
 
-  // Handle search type change
   const handleSearchTypeChange = (e) => {
     setSearchType(e.target.value);
-    // Clear results when switching search types
     setResults([]);
   };
 
@@ -119,8 +122,7 @@ const SearchPage = () => {
           </div>
         </div>
       ));
-    } else {
-      // Render user post count results
+    } else if (searchType === 'users') {
       return results.map((user) => (
         <div key={user.id} className="result-item">
           <div className="result-header">
@@ -132,6 +134,28 @@ const SearchPage = () => {
               <strong>{user.totalPosts}</strong> posts
             </div>
           </div>
+        </div>
+      ));
+    } else {
+      // Render channel post count results
+      return results.map((channel) => (
+        <div 
+          key={channel.id} 
+          className="result-item"
+          onClick={() => handleResultClick(channel)}
+        >
+          <div className="result-header">
+            <div className="result-user-info">
+              <span className="result-display-name">{channel.name}</span>
+              <span className="result-channel-name">{channel.memberCount} members</span>
+            </div>
+            <div className="result-post-count">
+              <strong>{channel.totalPosts}</strong> posts
+            </div>
+          </div>
+          {channel.description && (
+            <div className="result-content">{channel.description}</div>
+          )}
         </div>
       ));
     }
@@ -151,6 +175,7 @@ const SearchPage = () => {
           >
             <option value="content">Search Content</option>
             <option value="users">Search Users by Posts</option>
+            <option value="channels">Search Channels by Posts</option>
           </select>
 
           {searchType === 'content' ? (
@@ -163,7 +188,7 @@ const SearchPage = () => {
             />
           ) : (
             <select
-              value={userSortType}
+              value={sortType}
               onChange={handleSortChange}
               className="search-input"
             >
