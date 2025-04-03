@@ -1961,8 +1961,15 @@ app.get('/api/users/:userId/analytics', authenticateToken, async (req, res) => {
         OR reply_id IN (SELECT id FROM replies WHERE user_id = ?)
       `;
 
+      // Get bookmarks count
+      const bookmarksQuery = `
+        SELECT COUNT(*) as total_bookmarks
+        FROM bookmarks
+        WHERE user_id = ?
+      `;
+
       try {
-        const [messagesResult, repliesResult, channelsResult, voteStatsResult] = await Promise.all([
+        const [messagesResult, repliesResult, channelsResult, voteStatsResult, bookmarksResult] = await Promise.all([
           new Promise((resolve, reject) => {
             connection.query(messagesQuery, [userId], (err, results) => {
               if (err) reject(err);
@@ -1986,6 +1993,12 @@ app.get('/api/users/:userId/analytics', authenticateToken, async (req, res) => {
               if (err) reject(err);
               else resolve(results[0]);
             });
+          }),
+          new Promise((resolve, reject) => {
+            connection.query(bookmarksQuery, [userId], (err, results) => {
+              if (err) reject(err);
+              else resolve(results[0]);
+            });
           })
         ]);
 
@@ -2005,7 +2018,8 @@ app.get('/api/users/:userId/analytics', authenticateToken, async (req, res) => {
             totalPosts: messagesResult.total_messages + repliesResult.total_replies,
             activeChannels: channelsResult.length,
             totalUpvotes: voteStatsResult.total_upvotes || 0,
-            totalDownvotes: voteStatsResult.total_downvotes || 0
+            totalDownvotes: voteStatsResult.total_downvotes || 0,
+            totalBookmarks: bookmarksResult.total_bookmarks
           },
           channels: channelsResult
         });

@@ -65,7 +65,7 @@ const UserAnalytics = () => {
   }, [userId]);
 
   const chartData = {
-    labels: ['Messages', 'Replies', 'Posts', 'Active Channels', 'Upvotes', 'Downvotes'],
+    labels: ['Messages', 'Replies', 'Posts', 'Active Channels', 'Upvotes', 'Downvotes', 'Bookmarks'],
     datasets: [
       {
         label: 'User Activity',
@@ -75,7 +75,8 @@ const UserAnalytics = () => {
           analytics.statistics.totalPosts,
           analytics.statistics.activeChannels,
           analytics.statistics.totalUpvotes,
-          analytics.statistics.totalDownvotes
+          analytics.statistics.totalDownvotes,
+          analytics.statistics.totalBookmarks
         ] : [],
         backgroundColor: [
           'rgba(54, 162, 235, 0.7)',
@@ -83,7 +84,8 @@ const UserAnalytics = () => {
           'rgba(255, 206, 86, 0.7)',
           'rgba(153, 102, 255, 0.7)',
           'rgba(75, 192, 86, 0.7)',
-          'rgba(255, 99, 132, 0.7)'
+          'rgba(255, 99, 132, 0.7)',
+          'rgba(255, 159, 64, 0.7)'
         ],
         borderColor: [
           'rgb(54, 162, 235)',
@@ -91,7 +93,8 @@ const UserAnalytics = () => {
           'rgb(255, 206, 86)',
           'rgb(153, 102, 255)',
           'rgb(75, 192, 86)',
-          'rgb(255, 99, 132)'
+          'rgb(255, 99, 132)',
+          'rgb(255, 159, 64)'
         ],
         borderWidth: 1,
       },
@@ -255,6 +258,10 @@ const UserAnalytics = () => {
             <tr>
               <td>Total Downvotes Received</td>
               <td>{analytics.statistics.totalDownvotes}</td>
+            </tr>
+            <tr>
+              <td>Total Bookmarks</td>
+              <td>{analytics.statistics.totalBookmarks}</td>
             </tr>
           </tbody>
         </table>

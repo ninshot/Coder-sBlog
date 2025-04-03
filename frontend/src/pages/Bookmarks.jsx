@@ -64,6 +64,7 @@ const Bookmarks = () => {
                   <span>Author: {message.authorName}</span>
                   <span>Date: {new Date(message.created_at).toLocaleString()}</span>
                 </div>
+
               </div>
             ))}
           </div>
