@@ -59,14 +59,14 @@ const SearchPage = () => {
   return (
     <div className="search-page">
       <div className="search-header">
-        <h2>Search Messages and Replies</h2>
+        <h2>Search Messages, Replies, and Users</h2>
       </div>
       <div className="search-container">
         <form className="search-form" onSubmit={handleSearch}>
           <input
             type="text"
             className="search-input"
-            placeholder="Enter your search query..."
+            placeholder="Search messages, replies, or type a username..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
