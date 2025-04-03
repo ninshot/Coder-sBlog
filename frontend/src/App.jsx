@@ -19,6 +19,7 @@ const Navigation = () => {
   const user = isAuthenticated ? JSON.parse(localStorage.getItem('user')) : null;
   const isAdmin = user?.isAdmin;
   const isAdminPage = location.pathname === '/admin';
+  const isUserAnalyticsPage = location.pathname.includes('/users/') && location.pathname.includes('/analytics');
 
   if (isAuthenticated) {
     return (
@@ -91,7 +92,7 @@ const Navigation = () => {
               {isAdminPage ? 'Back to Channels' : 'Home'}
             </Link>
           )}
-          {isAdmin && !isAdminPage ? (
+          {isAdmin && !isAdminPage && !isUserAnalyticsPage ? (
             <Link 
               to="/admin" 
               style={{ 

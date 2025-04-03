@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Line } from 'react-chartjs-2';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
-  PointElement,
-  LineElement,
+  BarElement,
   Title,
   Tooltip,
   Legend,
@@ -17,8 +16,7 @@ import './UserAnalytics.css';
 ChartJS.register(
   CategoryScale,
   LinearScale,
-  PointElement,
-  LineElement,
+  BarElement,
   Title,
   Tooltip,
   Legend
@@ -26,6 +24,7 @@ ChartJS.register(
 
 const UserAnalytics = () => {
   const { userId } = useParams();
+  const navigate = useNavigate();
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -57,7 +56,7 @@ const UserAnalytics = () => {
   }, [userId]);
 
   const chartData = {
-    labels: ['Messages', 'Replies', 'Posts', 'Active Channels'],
+    labels: ['Messages', 'Replies', 'Posts', 'Active Channels', 'Upvotes', 'Downvotes'],
     datasets: [
       {
         label: 'User Activity',
@@ -65,18 +64,27 @@ const UserAnalytics = () => {
           analytics.statistics.totalMessages,
           analytics.statistics.totalReplies,
           analytics.statistics.totalPosts,
-          analytics.statistics.activeChannels
+          analytics.statistics.activeChannels,
+          analytics.statistics.totalUpvotes,
+          analytics.statistics.totalDownvotes
         ] : [],
-        borderColor: 'rgb(54, 162, 235)',
-        backgroundColor: 'rgba(54, 162, 235, 0.5)',
-        tension: 0.4,
-        fill: true,
-        pointBackgroundColor: 'rgb(54, 162, 235)',
-        pointBorderColor: '#fff',
-        pointHoverBackgroundColor: '#fff',
-        pointHoverBorderColor: 'rgb(54, 162, 235)',
-        pointRadius: 5,
-        pointHoverRadius: 7,
+        backgroundColor: [
+          'rgba(54, 162, 235, 0.7)',
+          'rgba(75, 192, 192, 0.7)',
+          'rgba(255, 206, 86, 0.7)',
+          'rgba(153, 102, 255, 0.7)',
+          'rgba(75, 192, 86, 0.7)',
+          'rgba(255, 99, 132, 0.7)'
+        ],
+        borderColor: [
+          'rgb(54, 162, 235)',
+          'rgb(75, 192, 192)',
+          'rgb(255, 206, 86)',
+          'rgb(153, 102, 255)',
+          'rgb(75, 192, 86)',
+          'rgb(255, 99, 132)'
+        ],
+        borderWidth: 1,
       },
     ],
   };
@@ -152,11 +160,19 @@ const UserAnalytics = () => {
     <div className="user-analytics">
       <div className="analytics-container">
         <div className="analytics-header">
-          <h1 className="analytics-title">User Analytics</h1>
+          <div className="header-left">
+            <button 
+              onClick={() => navigate('/admin')}
+              className="back-button"
+            >
+              ← Back to Admin Dashboard
+            </button>
+            <h1 className="analytics-title">User Analytics</h1>
+          </div>
         </div>
 
         <div className="chart-container">
-          <Line data={chartData} options={chartOptions} />
+          <Bar data={chartData} options={chartOptions} />
         </div>
 
         <table className="analytics-table">
@@ -179,6 +195,12 @@ const UserAnalytics = () => {
               <td className="table-cell">Registration Date</td>
               <td className="table-cell">
                 {new Date(analytics.user.registrationDate).toLocaleString()}
+              </td>
+            </tr>
+            <tr className="table-row">
+              <td className="table-cell">Last Login</td>
+              <td className="table-cell">
+                {analytics.user.lastLogin ? new Date(analytics.user.lastLogin).toLocaleString() : 'Never'}
               </td>
             </tr>
           </tbody>
@@ -207,6 +229,14 @@ const UserAnalytics = () => {
             <tr>
               <td>Active Channels</td>
               <td>{analytics.statistics.activeChannels}</td>
+            </tr>
+            <tr>
+              <td>Total Upvotes Received</td>
+              <td>{analytics.statistics.totalUpvotes}</td>
+            </tr>
+            <tr>
+              <td>Total Downvotes Received</td>
+              <td>{analytics.statistics.totalDownvotes}</td>
             </tr>
           </tbody>
         </table>

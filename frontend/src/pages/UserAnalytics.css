@@ -27,6 +27,32 @@
   border-bottom: 2px solid #e9ecef;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.back-button {
+  background-color: black;
+  color: white;
+  border: 1px solid black;
+  border-radius: 4px;
+  padding: 0.75rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.back-button:hover {
+  background-color: white;
+  color: black;
+  border: 1px solid black;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 .analytics-title {
   margin: 0;
   color: #212529;
