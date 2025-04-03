@@ -1,8 +1,18 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import '../styles/landing.css';
 
-function LandingPage() {
+const LandingPage = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
   return (
     <div className="landing-page">
       <div className="container">
@@ -38,13 +48,22 @@ function LandingPage() {
         <div className="container">
           <h2 className="section-title">Ready to Start?</h2>
           <p className="cta-text">Join our community and start exploring programming channels today!</p>
-          <Link to="/register" className="btn btn-primary">
-            Sign Up
-          </Link>
+          {user ? (
+            <button 
+              className="explore-btn"
+              onClick={() => navigate('/channels')}
+            >
+              Explore Channels
+            </button>
+          ) : (
+            <Link to="/register" className="btn btn-primary">
+              Sign Up
+            </Link>
+          )}
         </div>
       </div>
     </div>
   );
-}
+};
 
 export default LandingPage; 

@@ -131,6 +131,28 @@
   color: #666;
 }
 
+.explore-btn {
+  display: inline-block;
+  padding: clamp(10px, 2vw, 12px) clamp(20px, 4vw, 30px);
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  background-color: white;
+  color: black;
+  border: 2px solid black;
+  font-size: clamp(0.9rem, 1.5vw, 1rem);
+  cursor: pointer;
+}
+
+.explore-btn:hover {
+  background-color: white;
+  color: black;
+  border: 2px solid black;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 @media (max-width: 768px) {
   .landing-page {
     padding: 20px;

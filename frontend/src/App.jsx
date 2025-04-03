@@ -22,10 +22,11 @@ const Navigation = () => {
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
+        alignItems: 'center',
         padding: '0 1rem',
         width: '100%'
       }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flex: '1' }}>
           {(location.pathname.includes('/channels/') || isAdminPage) && (
             <Link 
               to="/channels" 
@@ -101,7 +102,16 @@ const Navigation = () => {
             {user?.username}
           </span>
         </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
+        <div style={{ 
+          flex: '1',
+          textAlign: 'center',
+          color: 'white',
+          fontSize: '1.5rem',
+          fontWeight: 'bold'
+        }}>
+          Code Connect
+        </div>
+        <div style={{ display: 'flex', gap: '1rem', flex: '1', justifyContent: 'flex-end' }}>
           <Logout />
         </div>
       </div>
@@ -111,8 +121,20 @@ const Navigation = () => {
   // Show only Register link on login page
   if (location.pathname === '/login') {
     return (
-      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 1rem' }}>
-        <Link to="/register" style={{ textDecoration: 'none', color: 'white' }}>Register</Link>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 1rem', width: '100%' }}>
+        <div style={{ flex: '1' }}></div>
+        <div style={{ 
+          flex: '1',
+          textAlign: 'center',
+          color: 'white',
+          fontSize: '1.5rem',
+          fontWeight: 'bold'
+        }}>
+          Code Connect
+        </div>
+        <div style={{ flex: '1', textAlign: 'right' }}>
+          <Link to="/register" style={{ textDecoration: 'none', color: 'white' }}>Register</Link>
+        </div>
       </div>
     );
   }
@@ -120,17 +142,41 @@ const Navigation = () => {
   // Show only Login link on register page
   if (location.pathname === '/register') {
     return (
-      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 1rem' }}>
-        <Link to="/login" style={{ textDecoration: 'none', color: 'white' }}>Login</Link>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 1rem', width: '100%' }}>
+        <div style={{ flex: '1' }}></div>
+        <div style={{ 
+          flex: '1',
+          textAlign: 'center',
+          color: 'white',
+          fontSize: '1.5rem',
+          fontWeight: 'bold'
+        }}>
+          Code Connect
+        </div>
+        <div style={{ flex: '1', textAlign: 'right' }}>
+          <Link to="/login" style={{ textDecoration: 'none', color: 'white' }}>Login</Link>
+        </div>
       </div>
     );
   }
 
   // Show both links on other pages
   return (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 1rem' }}>
-      <Link to="/login" style={{ textDecoration: 'none', color: 'white' }}>Login</Link>
-      <Link to="/register" style={{ textDecoration: 'none', color: 'white', marginLeft: '1rem' }}>Register</Link>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 1rem', width: '100%' }}>
+      <div style={{ flex: '1' }}></div>
+      <div style={{ 
+        flex: '1',
+        textAlign: 'center',
+        color: 'white',
+        fontSize: '1.5rem',
+        fontWeight: 'bold'
+      }}>
+        Code Connect
+      </div>
+      <div style={{ flex: '1', textAlign: 'right' }}>
+        <Link to="/login" style={{ textDecoration: 'none', color: 'white', marginRight: '1rem' }}>Login</Link>
+        <Link to="/register" style={{ textDecoration: 'none', color: 'white' }}>Register</Link>
+      </div>
     </div>
   );
 };
