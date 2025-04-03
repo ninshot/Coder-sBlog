@@ -264,6 +264,7 @@ async function initializeDatabase() {
   try {
     db = await createConnection();
     await createTables(db);
+    console.log('Database initialized successfully');
   } catch (err) {
     console.error('Failed to initialize database:', err);
     // Retry connection after 5 seconds
@@ -273,6 +274,14 @@ async function initializeDatabase() {
 
 // Start database initialization
 initializeDatabase();
+
+// Middleware to check database connection
+const checkDatabaseConnection = (req, res, next) => {
+  if (!db) {
+    return res.status(503).json({ error: 'Database connection not established' });
+  }
+  next();
+};
 
 // Middleware to authenticate JWT tokens
 function authenticateToken(req, res, next) {
@@ -1236,6 +1245,112 @@ app.post('/api/replies/:replyId/dislike', authenticateToken, (req, res) => {
       return res.status(404).json({ message: 'Reply not found' });
     }
     res.json({ message: 'Reply disliked successfully' });
+  });
+});
+
+// Search Routes
+// Search messages and replies
+app.get('/api/search', checkDatabaseConnection, (req, res) => {
+  const { query } = req.query;
+  
+  if (!query || query.trim() === '') {
+    return res.status(400).json({ message: 'Search query is required' });
+  }
+
+  // Clean and prepare the search query
+  const cleanedQuery = query.trim().replace(/[%_]/g, '\\$&'); // Escape SQL wildcards
+  const searchTerms = cleanedQuery.split(/\s+/).filter(term => term.length > 0);
+  
+  if (searchTerms.length === 0) {
+    return res.status(400).json({ message: 'Search query is required' });
+  }
+
+  // Build the search conditions
+  const messageConditions = searchTerms.map(term => 
+    `(m.title LIKE ? OR m.content LIKE ?)`
+  ).join(' AND ');
+  
+  const replyConditions = searchTerms.map(term => 
+    `(r.content LIKE ?)`
+  ).join(' AND ');
+
+  const searchQuery = `
+    SELECT 
+      'message' as type,
+      m.id,
+      m.title,
+      m.content,
+      m.created_at,
+      m.channel_id,
+      c.name as channel_name,
+      m.displayName as author,
+      m.upvotes,
+      m.downvotes,
+      m.image_url,
+      (
+        CASE 
+          WHEN m.title LIKE ? THEN 2
+          WHEN m.content LIKE ? THEN 1
+          ELSE 0
+        END
+      ) as relevance
+    FROM messages m
+    JOIN channels c ON m.channel_id = c.id
+    WHERE ${messageConditions}
+    
+    UNION ALL
+    
+    SELECT 
+      'reply' as type,
+      r.id,
+      NULL as title,
+      r.content,
+      r.created_at,
+      m.channel_id,
+      c.name as channel_name,
+      r.displayName as author,
+      r.upvotes,
+      r.downvotes,
+      r.image_url,
+      (
+        CASE 
+          WHEN r.content LIKE ? THEN 1
+          ELSE 0
+        END
+      ) as relevance
+    FROM replies r
+    JOIN messages m ON r.message_id = m.id
+    JOIN channels c ON m.channel_id = c.id
+    WHERE ${replyConditions}
+    
+    ORDER BY relevance DESC, created_at DESC
+  `;
+
+  // Prepare parameters for the query
+  const searchPattern = `%${cleanedQuery}%`;
+  const params = [
+    // Message title and content conditions
+    ...searchTerms.flatMap(term => [`%${term}%`, `%${term}%`]),
+    // Reply content conditions
+    ...searchTerms.map(term => `%${term}%`),
+    // Relevance calculation patterns
+    searchPattern, searchPattern, searchPattern
+  ];
+  
+  db.query(searchQuery, params, (err, results) => {
+    if (err) {
+      console.error('Error searching:', err);
+      return res.status(500).json({ error: err.message });
+    }
+    
+    // Format the results to include proper image URLs
+    const formattedResults = results.map(result => ({
+      ...result,
+      image_url: result.image_url ? `/uploads/${result.image_url}` : null,
+      created_at: new Date(result.created_at).toISOString()
+    }));
+    
+    res.json(formattedResults);
   });
 });
 
