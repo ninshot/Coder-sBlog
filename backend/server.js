@@ -102,6 +102,7 @@ function createTables(connection) {
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         description TEXT,
+        member_count INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `, (err) => {
@@ -111,6 +112,36 @@ function createTables(connection) {
         return;
       }
       console.log('Channels table created or already exists');
+
+      // Add member_count column if it doesn't exist
+      connection.query(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'channels' 
+        AND COLUMN_NAME = 'member_count'
+      `, (err, results) => {
+        if (err) {
+          console.error('Error checking for member_count column:', err);
+          reject(err);
+          return;
+        }
+
+        if (results.length === 0) {
+          connection.query(`
+            ALTER TABLE channels 
+            ADD COLUMN member_count INT DEFAULT 0
+          `, (err) => {
+            if (err) {
+              console.error('Error adding member_count column:', err);
+              reject(err);
+              return;
+            }
+            console.log('Added member_count column to channels table');
+          });
+        } else {
+          console.log('member_count column already exists in channels table');
+        }
+      });
     });
 
     // Create messages table (programming questions)
@@ -291,6 +322,26 @@ function createTables(connection) {
       console.log('Admin account created or already exists');
       resolve();
     });
+
+    // Create channel_members table
+    connection.query(`
+      CREATE TABLE IF NOT EXISTS channel_members (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        channel_id INT NOT NULL,
+        user_id INT NOT NULL,
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_membership (channel_id, user_id)
+      )
+    `, (err) => {
+      if (err) {
+        console.error('Error creating channel_members table:', err);
+        reject(err);
+        return;
+      }
+      console.log('Channel_members table created or already exists');
+    });
   });
 }
 
@@ -341,6 +392,30 @@ async function updateAllUserPostCounts(connection) {
         return;
       }
       console.log('Updated post counts for all users');
+      resolve(result);
+    });
+  });
+}
+
+// Function to update channel member count
+async function updateChannelMemberCount(connection, channelId) {
+  return new Promise((resolve, reject) => {
+    const query = `
+      UPDATE channels c
+      SET member_count = (
+        SELECT COUNT(*) 
+        FROM channel_members 
+        WHERE channel_id = ?
+      )
+      WHERE c.id = ?
+    `;
+    
+    connection.query(query, [channelId, channelId], (err, result) => {
+      if (err) {
+        console.error('Error updating channel member count:', err);
+        reject(err);
+        return;
+      }
       resolve(result);
     });
   });
@@ -463,6 +538,116 @@ app.get('/api/channels/:id', (req, res) => {
     }
     res.json(results[0]);
   });
+});
+
+// Join a channel
+app.post('/api/channels/:channelId/join', authenticateToken, async (req, res) => {
+  try {
+    const connection = await createConnection();
+    const channelId = req.params.channelId;
+    const userId = req.user.id;
+
+    // Check if user is already a member
+    connection.query(
+      'SELECT * FROM channel_members WHERE channel_id = ? AND user_id = ?',
+      [channelId, userId],
+      async (err, results) => {
+        if (err) {
+          connection.end();
+          console.error('Error checking channel membership:', err);
+          return res.status(500).json({ error: 'Error checking channel membership' });
+        }
+
+        if (results.length > 0) {
+          connection.end();
+          return res.status(400).json({ error: 'User is already a member of this channel' });
+        }
+
+        // Add user to channel
+        connection.query(
+          'INSERT INTO channel_members (channel_id, user_id) VALUES (?, ?)',
+          [channelId, userId],
+          async (err) => {
+            if (err) {
+              connection.end();
+              console.error('Error joining channel:', err);
+              return res.status(500).json({ error: 'Error joining channel' });
+            }
+
+            // Update member count
+            await updateChannelMemberCount(connection, channelId);
+            connection.end();
+            
+            res.json({ message: 'Successfully joined channel' });
+          }
+        );
+      }
+    );
+  } catch (error) {
+    console.error('Error in channel join:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Leave a channel
+app.post('/api/channels/:channelId/leave', authenticateToken, async (req, res) => {
+  try {
+    const connection = await createConnection();
+    const channelId = req.params.channelId;
+    const userId = req.user.id;
+
+    // Remove user from channel
+    connection.query(
+      'DELETE FROM channel_members WHERE channel_id = ? AND user_id = ?',
+      [channelId, userId],
+      async (err) => {
+        if (err) {
+          connection.end();
+          console.error('Error leaving channel:', err);
+          return res.status(500).json({ error: 'Error leaving channel' });
+        }
+
+        // Update member count
+        await updateChannelMemberCount(connection, channelId);
+        connection.end();
+        
+        res.json({ message: 'Successfully left channel' });
+      }
+    );
+  } catch (error) {
+    console.error('Error in channel leave:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get channel members
+app.get('/api/channels/:channelId/members', authenticateToken, async (req, res) => {
+  try {
+    const connection = await createConnection();
+    const channelId = req.params.channelId;
+
+    const query = `
+      SELECT u.id, u.username, u.displayName, cm.joined_at
+      FROM channel_members cm
+      JOIN users u ON cm.user_id = u.id
+      WHERE cm.channel_id = ?
+      ORDER BY cm.joined_at DESC
+    `;
+
+    connection.query(query, [channelId], (err, results) => {
+      connection.end();
+      
+      if (err) {
+        console.error('Error fetching channel members:', err);
+        return res.status(500).json({ error: 'Error fetching channel members' });
+      }
+
+      res.json({ members: results });
+    });
+  } catch (error) {
+    console.error('Error in fetching channel members:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 // Message Routes (Programming Questions)
@@ -1483,6 +1668,39 @@ app.get('/api/search/user-posts', async (req, res) => {
     });
   } catch (error) {
     console.error('Error in user posts search:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get channels sorted by creation date
+app.get('/api/channels/sorted/date', authenticateToken, async (req, res) => {
+  try {
+    const connection = await createConnection();
+    const { order = 'desc' } = req.query; // 'desc' for newest first, 'asc' for oldest first
+
+    const query = `
+      SELECT 
+        id,
+        name,
+        description,
+        member_count,
+        DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s') as created_at
+      FROM channels
+      ORDER BY created_at ${order === 'desc' ? 'DESC' : 'ASC'}
+    `;
+
+    connection.query(query, (err, results) => {
+      connection.end();
+      
+      if (err) {
+        console.error('Error fetching channels:', err);
+        return res.status(500).json({ error: 'Error fetching channels' });
+      }
+
+      res.json({ channels: results });
+    });
+  } catch (error) {
+    console.error('Error in fetching channels:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
