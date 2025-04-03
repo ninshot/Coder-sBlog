@@ -467,7 +467,7 @@ const ChannelDetail = () => {
                       onClick={() => handleDeleteMessage(message.id)}
                       className="delete-message-btn"
                     >
-                      Delete Message
+                      Delete
                     </button>
                   )}
                 </div>
@@ -570,7 +570,7 @@ const ChannelDetail = () => {
                             onClick={() => handleDeleteReply(reply.id)}
                             className="delete-reply-btn"
                           >
-                            Delete Reply
+                            Delete
                           </button>
                         )}
                       </div>
