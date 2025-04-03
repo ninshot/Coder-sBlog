@@ -54,6 +54,7 @@
   font-size: 1rem;
   transition: border-color 0.3s ease;
   background-color: #f8f9fa;
+  color: black;
 }
 
 .search-input:focus {
@@ -81,6 +82,28 @@
   color: black;
   border: 1px solid black;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.search-type-select {
+  padding: 0.75rem 1rem;
+  border: 1px solid lightgray;
+  border-radius: 4px;
+  font-size: 1rem;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  color: black;
+}
+
+.search-type-select:focus {
+  outline: none;
+  border-color: black;
+  background-color: whitesmoke;
+}
+
+.result-username {
+  color: #666;
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
 }
 
 .search-results {
@@ -194,4 +217,19 @@
   text-align: center;
   color: #dc3545;
   margin-top: 2rem;
+}
+
+.result-post-count {
+  font-size: 1.1rem;
+  color: #2c3e50;
+  padding: 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.result-post-count strong {
+  color: #000;
+  font-size: 1.2rem;
+  margin-right: 0.25rem;
 } 
