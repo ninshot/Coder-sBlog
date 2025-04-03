@@ -65,7 +65,7 @@ const Navigation = () => {
               Home
             </button>
           )}
-          {isAdmin && !isAdminPage && (
+          {user && (user.isAdmin === true || user.isAdmin === 1) && !isAdminPage && (
             <Link 
               to="/admin" 
               style={{ 
