@@ -134,4 +134,13 @@
 .delete-button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.analytics-button {
+  background-color: #2196F3;
+  margin-left: 8px;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+  line-height: 1.5;
 } 

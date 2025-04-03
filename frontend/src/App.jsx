@@ -9,6 +9,7 @@ import Channels from './pages/Channels';
 import ChannelDetail from './pages/ChannelDetail';
 import AdminDashboard from './pages/AdminDashboard';
 import SearchPage from './pages/SearchPage';
+import UserAnalytics from './pages/UserAnalytics';
 import './styles/general.css';
 
 const Navigation = () => {
@@ -46,15 +47,13 @@ const Navigation = () => {
               onMouseOver={(e) => {
                 e.currentTarget.style.background = 'white';
                 e.currentTarget.style.color = 'black';
-                e.currentTarget.style.border = '2px solid black';
-                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.border = '1px solid black';
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.background = 'black';
                 e.currentTarget.style.color = 'white';
-                e.currentTarget.style.border = 'none';
-                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.border = '1px solid black';
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
@@ -69,7 +68,7 @@ const Navigation = () => {
                 padding: '0.75rem',
                 background: 'black',
                 color: 'white',
-                border: 'none',
+                border: '1px solid black',
                 borderRadius: '4px',
                 fontSize: '1rem',
                 cursor: 'pointer',
@@ -79,15 +78,13 @@ const Navigation = () => {
               onMouseOver={(e) => {
                 e.currentTarget.style.background = 'white';
                 e.currentTarget.style.color = 'black';
-                e.currentTarget.style.border = '2px solid black';
-                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.border = '1px solid black';
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.background = 'black';
                 e.currentTarget.style.color = 'white';
-                e.currentTarget.style.border = 'none';
-                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.border = '1px solid black';
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
@@ -102,7 +99,7 @@ const Navigation = () => {
                 padding: '0.75rem',
                 background: 'black',
                 color: 'white',
-                border: 'none',
+                border: '1px solid black',
                 borderRadius: '4px',
                 fontSize: '1rem',
                 cursor: 'pointer',
@@ -112,29 +109,82 @@ const Navigation = () => {
               onMouseOver={(e) => {
                 e.currentTarget.style.background = 'white';
                 e.currentTarget.style.color = 'black';
-                e.currentTarget.style.border = '2px solid black';
-                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.border = '1px solid black';
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.background = 'black';
                 e.currentTarget.style.color = 'white';
-                e.currentTarget.style.border = 'none';
-                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.border = '1px solid black';
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
               Admin Dashboard
             </Link>
           ) : null}
-          <span style={{ 
-            color: 'white',
-            fontWeight: '500',
-            fontSize: '1rem',
-            marginLeft: '1rem'
-          }}>
-            {user?.username}
-          </span>
+          {location.pathname.includes('/users/') && location.pathname.includes('/analytics') ? (
+            <Link 
+              to="/channels" 
+              style={{ 
+                textDecoration: 'none',
+                padding: '0.75rem',
+                background: 'black',
+                color: 'white',
+                border: '1px solid black',
+                borderRadius: '4px',
+                fontSize: '1rem',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                fontWeight: '500',
+                marginLeft: '1rem'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'white';
+                e.currentTarget.style.color = 'black';
+                e.currentTarget.style.border = '1px solid black';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'black';
+                e.currentTarget.style.color = 'white';
+                e.currentTarget.style.border = '1px solid black';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              Home
+            </Link>
+          ) : (
+            <Link 
+              to={`/users/${user?.id}/analytics`}
+              style={{ 
+                textDecoration: 'none',
+                padding: '0.75rem',
+                background: 'black',
+                color: 'white',
+                border: '1px solid black',
+                borderRadius: '4px',
+                fontSize: '1rem',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                fontWeight: '500',
+                marginLeft: '1rem'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'white';
+                e.currentTarget.style.color = 'black';
+                e.currentTarget.style.border = '1px solid black';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'black';
+                e.currentTarget.style.color = 'white';
+                e.currentTarget.style.border = '1px solid black';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              {user?.username}
+            </Link>
+          )}
         </div>
         <div style={{ 
           flex: '1',
@@ -153,7 +203,7 @@ const Navigation = () => {
                 padding: '0.75rem',
                 background: 'black',
                 color: 'white',
-                border: 'none',
+                border: '1px solid black',
                 borderRadius: '4px',
                 fontSize: '1rem',
                 cursor: 'pointer',
@@ -163,15 +213,13 @@ const Navigation = () => {
               onMouseOver={(e) => {
                 e.currentTarget.style.background = 'white';
                 e.currentTarget.style.color = 'black';
-                e.currentTarget.style.border = '2px solid black';
-                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.border = '1px solid black';
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.background = 'black';
                 e.currentTarget.style.color = 'white';
-                e.currentTarget.style.border = 'none';
-                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.border = '1px solid black';
                 e.currentTarget.style.boxShadow = 'none';
               }}
             >
@@ -288,6 +336,14 @@ const App = () => {
               }
             />
             <Route path="/search" element={<SearchPage />} />
+            <Route
+              path="/users/:userId/analytics"
+              element={
+                <ProtectedRoute>
+                  <UserAnalytics />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </div>
       </div>

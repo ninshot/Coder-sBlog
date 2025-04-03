@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import "./AdminDashboard.css";
 
 const AdminDashboard = () => {
@@ -213,6 +213,12 @@ const AdminDashboard = () => {
                         >
                           Delete
                         </button>
+                        <Link 
+                          to={`/users/${user.id}/analytics`}
+                          className="action-button analytics-button"
+                        >
+                          View Analytics
+                        </Link>
                       </td>
                     </tr>
                   ))}
