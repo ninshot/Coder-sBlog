@@ -16,7 +16,7 @@
   width: 100%;
   justify-content: space-between;
   align-items: center;
-  position:sticky;
+  position: sticky;
   top: 0;
   z-index: 100;
 }
@@ -130,6 +130,7 @@
 .message-username {
   font-size: 1.1rem;
   color: #333;
+  font-weight: bold;
 }
 
 .message-title {
@@ -199,47 +200,6 @@
 
 .messages-container::-webkit-scrollbar-thumb:hover {
   background: #333;
-}
-
-@media (max-width: 768px) {
-  .channel-header-bar {
-    padding: 12px 15px;
-    flex-direction: column;
-    gap: 15px;
-    text-align: center;
-  }
-
-  .header-left {
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .header-left h1 {
-    font-size: 1.5rem;
-  }
-
-  .header-right {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .new-message-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .channel-description {
-    margin: 10px;
-    padding: 15px;
-  }
-
-  .messages-container {
-    padding: 10px;
-  }
-
-  .message-card {
-    padding: 15px;
-  }
 }
 
 .back-btn {
@@ -398,41 +358,11 @@
   border-radius: 4px;
 }
 
-.message-form input[type="file"] {
-  width: 100%;
-  padding: 8px;
-  border: 2px dashed #ddd;
-  border-radius: 4px;
-  background-color: #f5f5f5;
-  cursor: pointer;
-  transition: border-color 0.3s ease;
-}
-
-.message-form input[type="file"]:hover {
-  border-color: black;
-}
-
-.message-image {
-  margin-top: 10px;
-  text-align: center;
-}
-
-.message-image img {
-  max-width: 100%;
-  max-height: 400px;
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  object-fit: contain;
-  display: block;
-  margin: 0 auto;
-}
-
+/* Reply Styles */
 .reply-section {
   margin-top: 15px;
-  padding: 20px;
-  background: white;
+  background: transparent;
   border: none;
-  
 }
 
 .reply-textarea {
@@ -496,36 +426,6 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.file-input-container {
-  margin: 15px 0;
-  text-align: center;
-}
-
-.file-label {
-  display: inline-block;
-  padding: 8px 16px;
-  background-color: #f5f5f5;
-  border: 1px dashed #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.file-label:hover {
-  background-color: #e0e0e0;
-  border-color: #999;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideIn {
-  from { transform: translateY(-20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
 .reply-image {
   margin-top: 10px;
   text-align: center;
@@ -542,11 +442,11 @@
 }
 
 .reply-card {
-  background: white;
-  border-radius: 8px;
-  padding: 15px;
   margin-top: 10px;
-  border: 1px solid #ddd;
+  padding: 0;
+  background: transparent;
+  border: 1px solid black;
+  box-shadow: none;
 }
 
 .reply-user-info {
@@ -555,6 +455,7 @@
   align-items: flex-start;
   width: 100%;
   margin-bottom: 10px;
+  padding: 0;
 }
 
 .reply-user-details {
@@ -566,15 +467,146 @@
 .reply-username {
   font-size: 1.1rem;
   color: #333;
+  font-weight: bold;
 }
 
 .reply-content {
   font-size: 1rem;
   color: #666;
   margin: 0;
+  padding: 0;
 }
 
 .reply-date {
   color: #888;
   font-size: 0.9rem;
+}
+
+/* Nested Reply Styles */
+.nested-replies-section {
+  margin-left: 3rem;
+  padding-left: 1.5rem;
+  border-left: 3px solid #007bff;
+  margin-top: 0.5rem;
+  position: relative;
+}
+
+.nested-replies-section::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: #007bff;
+  opacity: 0.2;
+}
+
+.nested-reply-item {
+  margin-bottom: 1rem;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  position: relative;
+}
+
+.nested-reply-item:not(:last-child) {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 1rem;
+}
+
+.nested-reply-user-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 0;
+}
+
+.nested-reply-user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.nested-reply-username {
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: bold;
+}
+
+.nested-reply-content {
+  font-size: 1rem;
+  color: #666;
+  margin: 0;
+  padding: 0;
+}
+
+.nested-reply-date {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.nested-reply-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Delete Button Styles */
+.delete-message-btn,
+.delete-reply-btn {
+  padding: 0.5rem;
+  background: red;
+  color: white;
+  border: 2px solid red;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 100px;
+  text-align: center;
+}
+
+.delete-message-btn:hover,
+.delete-reply-btn:hover {
+  background: white;
+  color: red;
+  border: 2px solid red;
+}
+
+/* Message Styles */
+.message-username,
+.reply-username {
+  font-weight: bold;
+}
+
+.message-actions,
+.reply-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Image Preview Styles */
+.image-preview img {
+  max-width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+}
+
+/* Reply Card Styles */
+.reply-card {
+  margin-top: 10px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.reply-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 } 

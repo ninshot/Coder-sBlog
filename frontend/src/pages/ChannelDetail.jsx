@@ -59,7 +59,48 @@ const ChannelDetail = () => {
 
       const data = await response.json();
       console.log('Fetched messages data:', data); // Debug log
-      setMessages(data);
+      
+      // Process the messages to organize nested replies
+      const processedMessages = data.map(message => {
+        if (message.replies && message.replies.length > 0) {
+          // Create a map of all replies for quick lookup
+          const replyMap = new Map();
+          message.replies.forEach(reply => {
+            replyMap.set(reply.id, { ...reply, replies: [] });
+          });
+
+          // Organize replies into a tree structure
+          const organizedReplies = [];
+          message.replies.forEach(reply => {
+            if (reply.parent_reply_id) {
+              // This is a nested reply, find its parent and add it
+              const parentReply = replyMap.get(reply.parent_reply_id);
+              if (parentReply) {
+                parentReply.replies.push(replyMap.get(reply.id));
+              }
+            } else {
+              // This is a top-level reply
+              organizedReplies.push(replyMap.get(reply.id));
+            }
+          });
+
+          // Sort replies by creation date
+          const sortReplies = (replies) => {
+            replies.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            replies.forEach(reply => {
+              if (reply.replies && reply.replies.length > 0) {
+                sortReplies(reply.replies);
+              }
+            });
+          };
+
+          sortReplies(organizedReplies);
+          return { ...message, replies: organizedReplies };
+        }
+        return message;
+      });
+
+      setMessages(processedMessages);
     } catch (error) {
       console.error('Error fetching messages:', error);
       setError(error.message);
@@ -357,26 +398,7 @@ const ChannelDetail = () => {
                   {(user?.isAdmin || message.user_id === user?.id) && (
                     <button 
                       onClick={() => handleDeleteMessage(message.id)}
-                      style={{
-                        padding: '0.5rem',
-                        background: 'red',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        fontSize: '0.9rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'white';
-                        e.currentTarget.style.color = 'red';
-                        e.currentTarget.style.border = '2px solid red';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'red';
-                        e.currentTarget.style.color = 'white';
-                        e.currentTarget.style.border = 'none';
-                      }}
+                      className="delete-message-btn"
                     >
                       Delete Message
                     </button>
@@ -479,26 +501,7 @@ const ChannelDetail = () => {
                         {(user?.isAdmin || reply.user_id === user?.id) && (
                           <button 
                             onClick={() => handleDeleteReply(reply.id)}
-                            style={{
-                              padding: '0.5rem',
-                              background: 'red',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              fontSize: '0.9rem',
-                              cursor: 'pointer',
-                              transition: 'all 0.3s ease'
-                            }}
-                            onMouseOver={(e) => {
-                              e.currentTarget.style.background = 'white';
-                              e.currentTarget.style.color = 'red';
-                              e.currentTarget.style.border = '2px solid red';
-                            }}
-                            onMouseOut={(e) => {
-                              e.currentTarget.style.background = 'red';
-                              e.currentTarget.style.color = 'white';
-                              e.currentTarget.style.border = 'none';
-                            }}
+                            className="delete-reply-btn"
                           >
                             Delete Reply
                           </button>
@@ -511,7 +514,7 @@ const ChannelDetail = () => {
                       </div>
                     )}
                     {replyingToReplyId === reply.id && (
-                      <div className="reply-section">
+                      <div className="reply-section" style={{ marginTop: '1rem' }}>
                         <textarea
                           value={newReply.content}
                           onChange={(e) => setNewReply({ ...newReply, content: e.target.value })}
@@ -556,6 +559,100 @@ const ChannelDetail = () => {
                             Submit
                           </button>
                         </div>
+                      </div>
+                    )}
+                    {reply.replies && reply.replies.length > 0 && (
+                      <div className="nested-replies-section">
+                        {reply.replies.map((nestedReply) => (
+                          <div key={nestedReply.id} className="nested-reply-item">
+                            <div className="nested-reply-user-info">
+                              <div className="nested-reply-user-details">
+                                <span className="nested-reply-username">{nestedReply.displayName || 'Anonymous'}</span>
+                                <div className="nested-reply-content">{nestedReply.content}</div>
+                              </div>
+                              <div className="nested-reply-actions">
+                                <span className="nested-reply-date">
+                                  {new Date(nestedReply.created_at + 'Z').toLocaleString('en-US', { 
+                                    timeZone: 'America/Regina',
+                                    hour12: true,
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  })}
+                                </span>
+                                <button 
+                                  onClick={() => handleReplyClick(message, nestedReply.id)}
+                                  className="reply-btn"
+                                >
+                                  Reply
+                                </button>
+                                {(user?.isAdmin || nestedReply.user_id === user?.id) && (
+                                  <button 
+                                    onClick={() => handleDeleteReply(nestedReply.id)}
+                                    className="delete-reply-btn"
+                                  >
+                                    Delete Reply
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            {nestedReply.image_url && (
+                              <div className="reply-image">
+                                <img src={`http://localhost:8000${nestedReply.image_url}`} alt="Reply attachment" />
+                              </div>
+                            )}
+                            {replyingToReplyId === nestedReply.id && (
+                              <div className="reply-section">
+                                <textarea
+                                  value={newReply.content}
+                                  onChange={(e) => setNewReply({ ...newReply, content: e.target.value })}
+                                  placeholder="Write your reply..."
+                                  className="reply-textarea"
+                                />
+                                <div className="form-group">
+                                  <label htmlFor="replyImage" className="file-input-label">
+                                    Upload Image
+                                    <input
+                                      type="file"
+                                      id="replyImage"
+                                      name="image"
+                                      accept="image/*"
+                                      onChange={(e) => handleImageChange(e, 'reply')}
+                                      className="file-input"
+                                    />
+                                  </label>
+                                  {replyImagePreview && (
+                                    <div className="image-preview">
+                                      <img src={replyImagePreview} alt="Preview" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="reply-actions">
+                                  <button 
+                                    className="cancel-reply-btn"
+                                    onClick={() => {
+                                      setReplyingTo(null);
+                                      setReplyingToReplyId(null);
+                                      setParentReplyId(null);
+                                      setNewReply({ content: '', image: null });
+                                      setReplyImagePreview(null);
+                                    }}
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button 
+                                    className="submit-reply-btn"
+                                    onClick={() => handleCreateReply(message.id)}
+                                  >
+                                    Submit
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>

@@ -402,42 +402,100 @@ app.post('/api/channels/:channelId/messages', authenticateToken, upload.single('
 app.get('/api/channels/:channelId/messages', (req, res) => {
   const { channelId } = req.params;
   const query = `
-    SELECT m.*, 
-           DATE_FORMAT(m.created_at, '%Y-%m-%d %H:%i:%s') as created_at,
-           COALESCE(
-             (
-               SELECT JSON_ARRAYAGG(
-                 JSON_OBJECT(
-                   'id', r.id,
-                   'user_id', r.user_id,
-                   'displayName', r.displayName,
-                   'content', r.content,
-                   'image_url', r.image_url,
-                   'created_at', DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s')
-                 )
-               )
-               FROM replies r
-               WHERE r.message_id = m.id
-             ),
-             JSON_ARRAY()
-           ) as replies
+    WITH RECURSIVE reply_tree AS (
+      -- Base case: get all top-level replies (no parent)
+      SELECT 
+        id, 
+        message_id, 
+        user_id, 
+        displayName, 
+        content, 
+        image_url, 
+        parent_reply_id,
+        created_at,
+        0 as level
+      FROM replies 
+      WHERE message_id IN (
+        SELECT id FROM messages WHERE channel_id = ?
+      ) AND parent_reply_id IS NULL
+      
+      UNION ALL
+      
+      -- Recursive case: get all child replies
+      SELECT 
+        r.id, 
+        r.message_id, 
+        r.user_id, 
+        r.displayName, 
+        r.content, 
+        r.image_url, 
+        r.parent_reply_id,
+        r.created_at,
+        rt.level + 1
+      FROM replies r
+      JOIN reply_tree rt ON r.parent_reply_id = rt.id
+    )
+    SELECT 
+      m.*,
+      DATE_FORMAT(m.created_at, '%Y-%m-%d %H:%i:%s') as created_at,
+      COALESCE(
+        (
+          SELECT JSON_ARRAYAGG(
+            JSON_OBJECT(
+              'id', rt.id,
+              'user_id', rt.user_id,
+              'displayName', rt.displayName,
+              'content', rt.content,
+              'image_url', rt.image_url,
+              'parent_reply_id', rt.parent_reply_id,
+              'created_at', DATE_FORMAT(rt.created_at, '%Y-%m-%d %H:%i:%s')
+            )
+          )
+          FROM reply_tree rt
+          WHERE rt.message_id = m.id AND rt.level = 0
+        ),
+        JSON_ARRAY()
+      ) as replies
     FROM messages m 
     WHERE m.channel_id = ? 
     ORDER BY m.created_at DESC
   `;
   
-  db.query(query, [channelId], (err, results) => {
+  db.query(query, [channelId, channelId], (err, results) => {
     if (err) {
       console.error('Error fetching messages:', err);
       res.status(500).json({ error: err.message });
       return;
     }
     
-    // The replies are already parsed by mysql2
-    const messages = results.map(message => ({
-      ...message,
-      replies: message.replies || []
-    }));
+    // Process the results to build the nested structure
+    const messages = results.map(message => {
+      if (message.replies && message.replies.length > 0) {
+        // Create a map of all replies for quick lookup
+        const replyMap = new Map();
+        message.replies.forEach(reply => {
+          replyMap.set(reply.id, { ...reply, replies: [] });
+        });
+
+        // Organize replies into a tree structure
+        const organizedReplies = [];
+        message.replies.forEach(reply => {
+          if (reply.parent_reply_id) {
+            // This is a nested reply, find its parent and add it
+            const parentReply = replyMap.get(reply.parent_reply_id);
+            if (parentReply) {
+              parentReply.replies.push(replyMap.get(reply.id));
+            }
+          } else {
+            // This is a top-level reply
+            organizedReplies.push(replyMap.get(reply.id));
+          }
+        });
+
+        return { ...message, replies: organizedReplies };
+      }
+      return message;
+    });
     
     res.json(messages);
   });
