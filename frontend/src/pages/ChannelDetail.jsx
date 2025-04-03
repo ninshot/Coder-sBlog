@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getChannelById, getMessagesByChannel, createMessage, createReply } from '../services/api';
+import { getChannelById, getMessagesByChannel, createMessage, createReply, voteMessage, voteReply, getMessageVoteStatus, getReplyVoteStatus } from '../services/api';
 import '../styles/channelDetail.css';
 
 const ChannelDetail = () => {
@@ -27,6 +27,8 @@ const ChannelDetail = () => {
   const [replyImagePreview, setReplyImagePreview] = useState(null);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
+  const [messageVotes, setMessageVotes] = useState({});
+  const [replyVotes, setReplyVotes] = useState({});
 
   useEffect(() => {
     fetchChannelDetails();
@@ -110,6 +112,33 @@ const ChannelDetail = () => {
 
       console.log('Processed messages with organized replies:', processedMessages); // Debug log
       setMessages(processedMessages);
+
+      // Initialize vote status for messages and replies
+      const messageVotes = {};
+      const replyVotes = {};
+
+      for (const message of processedMessages) {
+        try {
+          const { data } = await getMessageVoteStatus(message.id);
+          messageVotes[message.id] = data.voteType;
+        } catch (error) {
+          console.error(`Error fetching vote status for message ${message.id}:`, error);
+        }
+
+        if (message.replies) {
+          for (const reply of message.replies) {
+            try {
+              const { data } = await getReplyVoteStatus(reply.id);
+              replyVotes[reply.id] = data.voteType;
+            } catch (error) {
+              console.error(`Error fetching vote status for reply ${reply.id}:`, error);
+            }
+          }
+        }
+      }
+
+      setMessageVotes(messageVotes);
+      setReplyVotes(replyVotes);
     } catch (error) {
       console.error('Error fetching messages:', error);
       setError(error.message);
@@ -354,6 +383,25 @@ const ChannelDetail = () => {
     }
   };
 
+  const handleVote = async (id, type, isMessage = true) => {
+    try {
+      if (isMessage) {
+        await voteMessage(id, type);
+        const { data } = await getMessageVoteStatus(id);
+        setMessageVotes(prev => ({ ...prev, [id]: data.voteType }));
+      } else {
+        await voteReply(id, type);
+        const { data } = await getReplyVoteStatus(id);
+        setReplyVotes(prev => ({ ...prev, [id]: data.voteType }));
+      }
+      // Refresh messages to update vote counts
+      fetchMessages();
+    } catch (error) {
+      console.error('Error voting:', error);
+      setError(error.message);
+    }
+  };
+
   const NestedReplies = ({ replies, message, user }) => {
     console.log('Rendering NestedReplies with:', replies); // Debug log
     
@@ -482,6 +530,20 @@ const ChannelDetail = () => {
               )}
             </div>
             <div className="message-actions">
+              <div className="vote-buttons">
+                <button 
+                  className={`vote-btn upvote ${messageVotes[message.id] === 'upvote' ? 'active' : ''}`}
+                  onClick={() => handleVote(message.id, 'upvote', true)}
+                >
+                  ↑ {message.upvotes || 0}
+                </button>
+                <button 
+                  className={`vote-btn downvote ${messageVotes[message.id] === 'downvote' ? 'active' : ''}`}
+                  onClick={() => handleVote(message.id, 'downvote', true)}
+                >
+                  ↓ {message.downvotes || 0}
+                </button>
+              </div>
               <button 
                 className="reply-btn"
                 onClick={() => handleReplyClick(message)}
@@ -559,6 +621,20 @@ const ChannelDetail = () => {
                             year: 'numeric'
                           })}
                         </span>
+                        <div className="vote-buttons">
+                          <button 
+                            className={`vote-btn upvote ${replyVotes[reply.id] === 'upvote' ? 'active' : ''}`}
+                            onClick={() => handleVote(reply.id, 'upvote', false)}
+                          >
+                            ↑ {reply.upvotes || 0}
+                          </button>
+                          <button 
+                            className={`vote-btn downvote ${replyVotes[reply.id] === 'downvote' ? 'active' : ''}`}
+                            onClick={() => handleVote(reply.id, 'downvote', false)}
+                          >
+                            ↓ {reply.downvotes || 0}
+                          </button>
+                        </div>
                         <button 
                           onClick={() => handleReplyClick(message, reply.id)}
                           className="reply-btn"

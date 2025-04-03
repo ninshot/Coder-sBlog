@@ -636,4 +636,43 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+/* Vote Button Styles */
+.vote-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.vote-btn {
+  color: black;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vote-btn:hover {
+  background-color: white;
+}
+
+.vote-btn.active {
+  background-color: white;
+}
+
+.vote-btn.upvote.active {
+  color: #4CAF50;
+  border-color: #4CAF50;
+}
+
+.vote-btn.downvote.active {
+  color: #f44336;
+  border-color: #f44336;
 } 

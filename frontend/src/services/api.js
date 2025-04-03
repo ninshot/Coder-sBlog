@@ -56,4 +56,10 @@ export const createReply = async (messageId, formData) => {
   }
 };
 
+// Vote-related API functions
+export const voteMessage = (messageId, voteType) => api.post(`/messages/${messageId}/vote`, { voteType });
+export const voteReply = (replyId, voteType) => api.post(`/replies/${replyId}/vote`, { voteType });
+export const getMessageVoteStatus = (messageId) => api.get(`/messages/${messageId}/vote-status`);
+export const getReplyVoteStatus = (replyId) => api.get(`/replies/${replyId}/vote-status`);
+
 export default api; 
