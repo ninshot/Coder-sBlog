@@ -123,6 +123,8 @@ function createTables(connection) {
         title VARCHAR(255) NOT NULL,
         content TEXT NOT NULL,
         image_url VARCHAR(255),
+        upvotes INT DEFAULT 0,
+        downvotes INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -145,6 +147,8 @@ function createTables(connection) {
         displayName VARCHAR(255),
         content TEXT NOT NULL,
         image_url VARCHAR(255),
+        upvotes INT DEFAULT 0,
+        downvotes INT DEFAULT 0,
         parent_reply_id INT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
@@ -191,6 +195,30 @@ function createTables(connection) {
           resolve();
         }
       });
+    });
+
+    // Create votes table
+    connection.query(`
+      CREATE TABLE IF NOT EXISTS votes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        message_id INT,
+        reply_id INT,
+        vote_type ENUM('upvote', 'downvote') NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+        FOREIGN KEY (reply_id) REFERENCES replies(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_vote (user_id, message_id, reply_id)
+      )
+    `, (err) => {
+      if (err) {
+        console.error('Error creating votes table:', err);
+        reject(err);
+        return;
+      }
+      console.log('Votes table created or already exists');
+      resolve();
     });
 
     // Create users table
@@ -849,6 +877,388 @@ app.delete('/api/replies/:replyId', authenticateToken, (req, res) => {
       }
       res.json({ message: 'Reply deleted successfully' });
     });
+  });
+});
+
+// Vote Routes
+// Vote on a message
+app.post('/api/messages/:messageId/vote', authenticateToken, (req, res) => {
+  const { messageId } = req.params;
+  const { voteType } = req.body;
+  const userId = req.user.id;
+
+  if (!['upvote', 'downvote'].includes(voteType)) {
+    return res.status(400).json({ message: 'Invalid vote type' });
+  }
+
+  // Start a transaction
+  db.beginTransaction((err) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    // Check if user has already voted
+    const checkVoteQuery = 'SELECT vote_type FROM votes WHERE user_id = ? AND message_id = ?';
+    db.query(checkVoteQuery, [userId, messageId], (err, results) => {
+      if (err) {
+        db.rollback(() => {
+          res.status(500).json({ error: err.message });
+        });
+        return;
+      }
+
+      if (results.length > 0) {
+        const previousVote = results[0].vote_type;
+        if (previousVote === voteType) {
+          // Remove the vote if clicking the same button again
+          const removeVoteQuery = 'DELETE FROM votes WHERE user_id = ? AND message_id = ?';
+          const updateCountQuery = `
+            UPDATE messages 
+            SET ${voteType}s = ${voteType}s - 1 
+            WHERE id = ?
+          `;
+
+          db.query(removeVoteQuery, [userId, messageId], (err) => {
+            if (err) {
+              db.rollback(() => {
+                res.status(500).json({ error: err.message });
+              });
+              return;
+            }
+
+            db.query(updateCountQuery, [messageId], (err) => {
+              if (err) {
+                db.rollback(() => {
+                  res.status(500).json({ error: err.message });
+                });
+                return;
+              }
+
+              db.commit((err) => {
+                if (err) {
+                  db.rollback(() => {
+                    res.status(500).json({ error: err.message });
+                  });
+                  return;
+                }
+                res.json({ message: 'Vote removed successfully' });
+              });
+            });
+          });
+        } else {
+          // Change vote type
+          const updateVoteQuery = 'UPDATE votes SET vote_type = ? WHERE user_id = ? AND message_id = ?';
+          const updateCountQuery = `
+            UPDATE messages 
+            SET ${previousVote}s = ${previousVote}s - 1,
+                ${voteType}s = ${voteType}s + 1 
+            WHERE id = ?
+          `;
+
+          db.query(updateVoteQuery, [voteType, userId, messageId], (err) => {
+            if (err) {
+              db.rollback(() => {
+                res.status(500).json({ error: err.message });
+              });
+              return;
+            }
+
+            db.query(updateCountQuery, [messageId], (err) => {
+              if (err) {
+                db.rollback(() => {
+                  res.status(500).json({ error: err.message });
+                });
+                return;
+              }
+
+              db.commit((err) => {
+                if (err) {
+                  db.rollback(() => {
+                    res.status(500).json({ error: err.message });
+                  });
+                  return;
+                }
+                res.json({ message: 'Vote updated successfully' });
+              });
+            });
+          });
+        }
+      } else {
+        // Add new vote
+        const addVoteQuery = 'INSERT INTO votes (user_id, message_id, vote_type) VALUES (?, ?, ?)';
+        const updateCountQuery = `
+          UPDATE messages 
+          SET ${voteType}s = ${voteType}s + 1 
+          WHERE id = ?
+        `;
+
+        db.query(addVoteQuery, [userId, messageId, voteType], (err) => {
+          if (err) {
+            db.rollback(() => {
+              res.status(500).json({ error: err.message });
+            });
+            return;
+          }
+
+          db.query(updateCountQuery, [messageId], (err) => {
+            if (err) {
+              db.rollback(() => {
+                res.status(500).json({ error: err.message });
+              });
+              return;
+            }
+
+            db.commit((err) => {
+              if (err) {
+                db.rollback(() => {
+                  res.status(500).json({ error: err.message });
+                });
+                return;
+              }
+              res.json({ message: 'Vote added successfully' });
+            });
+          });
+        });
+      }
+    });
+  });
+});
+
+// Vote on a reply
+app.post('/api/replies/:replyId/vote', authenticateToken, (req, res) => {
+  const { replyId } = req.params;
+  const { voteType } = req.body;
+  const userId = req.user.id;
+
+  if (!['upvote', 'downvote'].includes(voteType)) {
+    return res.status(400).json({ message: 'Invalid vote type' });
+  }
+
+  // Start a transaction
+  db.beginTransaction((err) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+
+    // Check if user has already voted
+    const checkVoteQuery = 'SELECT vote_type FROM votes WHERE user_id = ? AND reply_id = ?';
+    db.query(checkVoteQuery, [userId, replyId], (err, results) => {
+      if (err) {
+        db.rollback(() => {
+          res.status(500).json({ error: err.message });
+        });
+        return;
+      }
+
+      if (results.length > 0) {
+        const previousVote = results[0].vote_type;
+        if (previousVote === voteType) {
+          // Remove the vote if clicking the same button again
+          const removeVoteQuery = 'DELETE FROM votes WHERE user_id = ? AND reply_id = ?';
+          const updateCountQuery = `
+            UPDATE replies 
+            SET ${voteType}s = ${voteType}s - 1 
+            WHERE id = ?
+          `;
+
+          db.query(removeVoteQuery, [userId, replyId], (err) => {
+            if (err) {
+              db.rollback(() => {
+                res.status(500).json({ error: err.message });
+              });
+              return;
+            }
+
+            db.query(updateCountQuery, [replyId], (err) => {
+              if (err) {
+                db.rollback(() => {
+                  res.status(500).json({ error: err.message });
+                });
+                return;
+              }
+
+              db.commit((err) => {
+                if (err) {
+                  db.rollback(() => {
+                    res.status(500).json({ error: err.message });
+                  });
+                  return;
+                }
+                res.json({ message: 'Vote removed successfully' });
+              });
+            });
+          });
+        } else {
+          // Change vote type
+          const updateVoteQuery = 'UPDATE votes SET vote_type = ? WHERE user_id = ? AND reply_id = ?';
+          const updateCountQuery = `
+            UPDATE replies 
+            SET ${previousVote}s = ${previousVote}s - 1,
+                ${voteType}s = ${voteType}s + 1 
+            WHERE id = ?
+          `;
+
+          db.query(updateVoteQuery, [voteType, userId, replyId], (err) => {
+            if (err) {
+              db.rollback(() => {
+                res.status(500).json({ error: err.message });
+              });
+              return;
+            }
+
+            db.query(updateCountQuery, [replyId], (err) => {
+              if (err) {
+                db.rollback(() => {
+                  res.status(500).json({ error: err.message });
+                });
+                return;
+              }
+
+              db.commit((err) => {
+                if (err) {
+                  db.rollback(() => {
+                    res.status(500).json({ error: err.message });
+                  });
+                  return;
+                }
+                res.json({ message: 'Vote updated successfully' });
+              });
+            });
+          });
+        }
+      } else {
+        // Add new vote
+        const addVoteQuery = 'INSERT INTO votes (user_id, reply_id, vote_type) VALUES (?, ?, ?)';
+        const updateCountQuery = `
+          UPDATE replies 
+          SET ${voteType}s = ${voteType}s + 1 
+          WHERE id = ?
+        `;
+
+        db.query(addVoteQuery, [userId, replyId, voteType], (err) => {
+          if (err) {
+            db.rollback(() => {
+              res.status(500).json({ error: err.message });
+            });
+            return;
+          }
+
+          db.query(updateCountQuery, [replyId], (err) => {
+            if (err) {
+              db.rollback(() => {
+                res.status(500).json({ error: err.message });
+              });
+              return;
+            }
+
+            db.commit((err) => {
+              if (err) {
+                db.rollback(() => {
+                  res.status(500).json({ error: err.message });
+                });
+                return;
+              }
+              res.json({ message: 'Vote added successfully' });
+            });
+          });
+        });
+      }
+    });
+  });
+});
+
+// Get user's vote status for a message
+app.get('/api/messages/:messageId/vote-status', authenticateToken, (req, res) => {
+  const { messageId } = req.params;
+  const userId = req.user.id;
+
+  const query = 'SELECT vote_type FROM votes WHERE user_id = ? AND message_id = ?';
+  db.query(query, [userId, messageId], (err, results) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({ voteType: results.length > 0 ? results[0].vote_type : null });
+  });
+});
+
+// Get user's vote status for a reply
+app.get('/api/replies/:replyId/vote-status', authenticateToken, (req, res) => {
+  const { replyId } = req.params;
+  const userId = req.user.id;
+
+  const query = 'SELECT vote_type FROM votes WHERE user_id = ? AND reply_id = ?';
+  db.query(query, [userId, replyId], (err, results) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json({ voteType: results.length > 0 ? results[0].vote_type : null });
+  });
+});
+
+// Like/Dislike Routes
+// Like a message
+app.post('/api/messages/:messageId/like', authenticateToken, (req, res) => {
+  const { messageId } = req.params;
+  const query = 'UPDATE messages SET upvotes = upvotes + 1 WHERE id = ?';
+  
+  db.query(query, [messageId], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+    res.json({ message: 'Message liked successfully' });
+  });
+});
+
+// Dislike a message
+app.post('/api/messages/:messageId/dislike', authenticateToken, (req, res) => {
+  const { messageId } = req.params;
+  const query = 'UPDATE messages SET downvotes = downvotes + 1 WHERE id = ?';
+  
+  db.query(query, [messageId], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+    res.json({ message: 'Message disliked successfully' });
+  });
+});
+
+// Like a reply
+app.post('/api/replies/:replyId/like', authenticateToken, (req, res) => {
+  const { replyId } = req.params;
+  const query = 'UPDATE replies SET upvotes = upvotes + 1 WHERE id = ?';
+  
+  db.query(query, [replyId], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: 'Reply not found' });
+    }
+    res.json({ message: 'Reply liked successfully' });
+  });
+});
+
+// Dislike a reply
+app.post('/api/replies/:replyId/dislike', authenticateToken, (req, res) => {
+  const { replyId } = req.params;
+  const query = 'UPDATE replies SET downvotes = downvotes + 1 WHERE id = ?';
+  
+  db.query(query, [replyId], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (results.affectedRows === 0) {
+      return res.status(404).json({ message: 'Reply not found' });
+    }
+    res.json({ message: 'Reply disliked successfully' });
   });
 });
 
