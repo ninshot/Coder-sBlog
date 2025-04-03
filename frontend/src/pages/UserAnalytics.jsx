@@ -33,19 +33,28 @@ const UserAnalytics = () => {
     const fetchAnalytics = async () => {
       try {
         const token = localStorage.getItem('token');
+        console.log('Fetching analytics for user:', userId);
+        console.log('Using token:', token ? 'Token exists' : 'No token found');
+        
         const response = await fetch(`http://localhost:8000/api/users/${userId}/analytics`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
+        console.log('Response status:', response.status);
+        
         if (!response.ok) {
-          throw new Error('Failed to fetch analytics');
+          const errorData = await response.json();
+          console.error('Error response:', errorData);
+          throw new Error(errorData.error || 'Failed to fetch analytics');
         }
 
         const data = await response.json();
+        console.log('Analytics data:', data);
         setAnalytics(data);
       } catch (err) {
+        console.error('Error in fetchAnalytics:', err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -140,7 +149,16 @@ const UserAnalytics = () => {
     return (
       <div className="user-analytics">
         <div className="analytics-container">
-          <div className="error">{error}</div>
+          <div className="error">
+            <h2>Error Loading Analytics</h2>
+            <p>{error}</p>
+            <button 
+              onClick={() => navigate('/admin')}
+              className="back-button"
+            >
+              ← Back to Admin Dashboard
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -248,7 +266,7 @@ const UserAnalytics = () => {
             </tr>
           </thead>
           <tbody>
-            {analytics.statistics.channels.map(channel => (
+            {analytics.channels && analytics.channels.map(channel => (
               <tr key={channel.id}>
                 <td>{channel.name}</td>
               </tr>

@@ -261,6 +261,7 @@ function createTables(connection) {
         displayName VARCHAR(255) NOT NULL,
         isAdmin BOOLEAN DEFAULT FALSE,
         post_count INT DEFAULT 0,
+        last_login TIMESTAMP NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `, (err) => {
@@ -302,6 +303,38 @@ function createTables(connection) {
           });
         } else {
           console.log('post_count column already exists in users table');
+          resolve();
+        }
+      });
+
+      // Add last_login column if it doesn't exist
+      connection.query(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_NAME = 'users' 
+        AND COLUMN_NAME = 'last_login'
+      `, (err, results) => {
+        if (err) {
+          console.error('Error checking for last_login column:', err);
+          reject(err);
+          return;
+        }
+
+        if (results.length === 0) {
+          connection.query(`
+            ALTER TABLE users 
+            ADD COLUMN last_login TIMESTAMP NULL
+          `, (err) => {
+            if (err) {
+              console.error('Error adding last_login column:', err);
+              reject(err);
+              return;
+            }
+            console.log('Added last_login column to users table');
+            resolve();
+          });
+        } else {
+          console.log('last_login column already exists in users table');
           resolve();
         }
       });
@@ -1027,6 +1060,14 @@ app.post('/api/auth/login', (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    // Update last login timestamp
+    const updateLastLoginQuery = 'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?';
+    db.query(updateLastLoginQuery, [user.id], (err) => {
+      if (err) {
+        console.error('Error updating last login:', err);
+      }
+    });
+
     const token = jwt.sign(
       { 
         id: user.id, 
@@ -1044,7 +1085,8 @@ app.post('/api/auth/login', (req, res) => {
         id: user.id,
         username: user.username,
         displayName: user.displayName,
-        isAdmin: user.isAdmin
+        isAdmin: user.isAdmin,
+        lastLogin: user.last_login
       }
     });
   });
@@ -1841,93 +1883,121 @@ app.get('/api/users/:userId/analytics', authenticateToken, async (req, res) => {
         id,
         username,
         displayName,
-        created_at as registration_date
+        created_at as registration_date,
+        last_login
       FROM users
       WHERE id = ?
     `;
 
-    // Get total messages count
-    const messagesQuery = `
-      SELECT COUNT(*) as total_messages
-      FROM messages
-      WHERE user_id = ?
-    `;
-
-    // Get total replies count
-    const repliesQuery = `
-      SELECT COUNT(*) as total_replies
-      FROM replies
-      WHERE user_id = ?
-    `;
-
-    // Get channels the user has posted in
-    const channelsQuery = `
-      SELECT DISTINCT c.id, c.name
-      FROM channels c
-      JOIN messages m ON c.id = m.channel_id
-      WHERE m.user_id = ?
-      UNION
-      SELECT DISTINCT c.id, c.name
-      FROM channels c
-      JOIN messages m ON c.id = m.channel_id
-      JOIN replies r ON m.id = r.message_id
-      WHERE r.user_id = ?
-    `;
-
-    // Execute all queries in parallel
-    const [userResults, messagesResults, repliesResults, channelsResults] = await Promise.all([
-      new Promise((resolve, reject) => {
-        connection.query(userQuery, [userId], (err, results) => {
-          if (err) reject(err);
-          else resolve(results[0]);
-        });
-      }),
-      new Promise((resolve, reject) => {
-        connection.query(messagesQuery, [userId], (err, results) => {
-          if (err) reject(err);
-          else resolve(results[0]);
-        });
-      }),
-      new Promise((resolve, reject) => {
-        connection.query(repliesQuery, [userId], (err, results) => {
-          if (err) reject(err);
-          else resolve(results[0]);
-        });
-      }),
-      new Promise((resolve, reject) => {
-        connection.query(channelsQuery, [userId, userId], (err, results) => {
-          if (err) reject(err);
-          else resolve(results);
-        });
-      })
-    ]);
-
-    connection.end();
-
-    // Format the response
-    const analytics = {
-      user: {
-        id: userResults.id,
-        username: userResults.username,
-        displayName: userResults.displayName,
-        registrationDate: userResults.registration_date
-      },
-      statistics: {
-        totalMessages: parseInt(messagesResults.total_messages),
-        totalReplies: parseInt(repliesResults.total_replies),
-        totalPosts: parseInt(messagesResults.total_messages) + parseInt(repliesResults.total_replies),
-        activeChannels: channelsResults.length,
-        channels: channelsResults.map(channel => ({
-          id: channel.id,
-          name: channel.name
-        }))
+    connection.query(userQuery, [userId], async (err, userResults) => {
+      if (err) {
+        connection.end();
+        console.error('Error fetching user info:', err);
+        return res.status(500).json({ error: 'Error fetching user info' });
       }
-    };
 
-    res.json(analytics);
+      if (userResults.length === 0) {
+        connection.end();
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const user = userResults[0];
+
+      // Get total messages count
+      const messagesQuery = `
+        SELECT COUNT(*) as total_messages
+        FROM messages
+        WHERE user_id = ?
+      `;
+
+      // Get total replies count
+      const repliesQuery = `
+        SELECT COUNT(*) as total_replies
+        FROM replies
+        WHERE user_id = ?
+      `;
+
+      // Get channels the user has posted in
+      const channelsQuery = `
+        SELECT DISTINCT c.id, c.name
+        FROM channels c
+        JOIN messages m ON c.id = m.channel_id
+        WHERE m.user_id = ?
+        UNION
+        SELECT DISTINCT c.id, c.name
+        FROM channels c
+        JOIN messages m ON c.id = m.channel_id
+        JOIN replies r ON m.id = r.message_id
+        WHERE r.user_id = ?
+      `;
+
+      // Get vote statistics
+      const voteStatsQuery = `
+        SELECT 
+          SUM(CASE WHEN vote_type = 'upvote' THEN 1 ELSE 0 END) as total_upvotes,
+          SUM(CASE WHEN vote_type = 'downvote' THEN 1 ELSE 0 END) as total_downvotes
+        FROM votes
+        WHERE message_id IN (SELECT id FROM messages WHERE user_id = ?)
+        OR reply_id IN (SELECT id FROM replies WHERE user_id = ?)
+      `;
+
+      try {
+        const [messagesResult, repliesResult, channelsResult, voteStatsResult] = await Promise.all([
+          new Promise((resolve, reject) => {
+            connection.query(messagesQuery, [userId], (err, results) => {
+              if (err) reject(err);
+              else resolve(results[0]);
+            });
+          }),
+          new Promise((resolve, reject) => {
+            connection.query(repliesQuery, [userId], (err, results) => {
+              if (err) reject(err);
+              else resolve(results[0]);
+            });
+          }),
+          new Promise((resolve, reject) => {
+            connection.query(channelsQuery, [userId, userId], (err, results) => {
+              if (err) reject(err);
+              else resolve(results);
+            });
+          }),
+          new Promise((resolve, reject) => {
+            connection.query(voteStatsQuery, [userId, userId], (err, results) => {
+              if (err) reject(err);
+              else resolve(results[0]);
+            });
+          })
+        ]);
+
+        connection.end();
+
+        res.json({
+          user: {
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName,
+            registrationDate: user.registration_date,
+            lastLogin: user.last_login
+          },
+          statistics: {
+            totalMessages: messagesResult.total_messages,
+            totalReplies: repliesResult.total_replies,
+            totalPosts: messagesResult.total_messages + repliesResult.total_replies,
+            activeChannels: channelsResult.length,
+            totalUpvotes: voteStatsResult.total_upvotes || 0,
+            totalDownvotes: voteStatsResult.total_downvotes || 0
+          },
+          channels: channelsResult
+        });
+      } catch (error) {
+        connection.end();
+        console.error('Error fetching analytics:', error);
+        res.status(500).json({ error: 'Error fetching analytics' });
+      }
+    });
   } catch (error) {
-    console.error('Error fetching user analytics:', error);
-    res.status(500).json({ error: 'Error fetching user analytics' });
+    console.error('Error in analytics endpoint:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
