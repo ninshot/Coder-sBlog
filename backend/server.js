@@ -249,7 +249,27 @@ function createTables(connection) {
         return;
       }
       console.log('Votes table created or already exists');
-      resolve();
+
+      // Create bookmarks table
+      connection.query(`
+        CREATE TABLE IF NOT EXISTS bookmarks (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          message_id INT NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+          UNIQUE KEY unique_bookmark (user_id, message_id)
+        )
+      `, (err) => {
+        if (err) {
+          console.error('Error creating bookmarks table:', err);
+          reject(err);
+          return;
+        }
+        console.log('Bookmarks table created or already exists');
+        resolve();
+      });
     });
 
     // Create users table
@@ -1998,6 +2018,105 @@ app.get('/api/users/:userId/analytics', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error in analytics endpoint:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Bookmark endpoints
+app.post('/api/bookmarks', authenticateToken, async (req, res) => {
+  const { message_id } = req.body;
+  const user_id = req.user.id;
+
+  try {
+    const connection = await createConnection();
+    
+    const [existingBookmark] = await connection.promise().query(
+      'SELECT * FROM bookmarks WHERE user_id = ? AND message_id = ?',
+      [user_id, message_id]
+    );
+
+    if (existingBookmark.length > 0) {
+      return res.status(400).json({ error: 'Message already bookmarked' });
+    }
+
+    await connection.promise().query(
+      'INSERT INTO bookmarks (user_id, message_id) VALUES (?, ?)',
+      [user_id, message_id]
+    );
+
+    connection.end();
+    res.status(201).json({ message: 'Bookmark added successfully' });
+  } catch (error) {
+    console.error('Error adding bookmark:', error);
+    res.status(500).json({ error: 'Failed to add bookmark' });
+  }
+});
+
+app.delete('/api/bookmarks/:message_id', authenticateToken, async (req, res) => {
+  const { message_id } = req.params;
+  const user_id = req.user.id;
+
+  try {
+    const connection = await createConnection();
+    
+    const result = await connection.promise().query(
+      'DELETE FROM bookmarks WHERE user_id = ? AND message_id = ?',
+      [user_id, message_id]
+    );
+
+    connection.end();
+    
+    if (result[0].affectedRows === 0) {
+      return res.status(404).json({ error: 'Bookmark not found' });
+    }
+
+    res.json({ message: 'Bookmark removed successfully' });
+  } catch (error) {
+    console.error('Error removing bookmark:', error);
+    res.status(500).json({ error: 'Failed to remove bookmark' });
+  }
+});
+
+app.get('/api/bookmarks', authenticateToken, async (req, res) => {
+  const user_id = req.user.id;
+
+  try {
+    const connection = await createConnection();
+    
+    const [bookmarks] = await connection.promise().query(`
+      SELECT m.*, u.displayName as authorName, c.name as channelName
+      FROM bookmarks b
+      JOIN messages m ON b.message_id = m.id
+      JOIN users u ON m.user_id = u.id
+      JOIN channels c ON m.channel_id = c.id
+      WHERE b.user_id = ?
+      ORDER BY b.created_at DESC
+    `, [user_id]);
+
+    connection.end();
+    res.json(bookmarks);
+  } catch (error) {
+    console.error('Error fetching bookmarks:', error);
+    res.status(500).json({ error: 'Failed to fetch bookmarks' });
+  }
+});
+
+app.get('/api/bookmarks/check/:message_id', authenticateToken, async (req, res) => {
+  const { message_id } = req.params;
+  const user_id = req.user.id;
+
+  try {
+    const connection = await createConnection();
+    
+    const [bookmark] = await connection.promise().query(
+      'SELECT * FROM bookmarks WHERE user_id = ? AND message_id = ?',
+      [user_id, message_id]
+    );
+
+    connection.end();
+    res.json({ isBookmarked: bookmark.length > 0 });
+  } catch (error) {
+    console.error('Error checking bookmark status:', error);
+    res.status(500).json({ error: 'Failed to check bookmark status' });
   }
 });
 
