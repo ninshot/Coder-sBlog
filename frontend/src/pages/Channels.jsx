@@ -16,6 +16,8 @@ const Channels = () => {
   });
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [sortType, setSortType] = useState('posts'); // 'posts' or 'date'
+  const [sortOrder, setSortOrder] = useState('desc'); // 'desc' or 'asc'
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -135,6 +137,38 @@ const Channels = () => {
     navigate(`/channels/${channel.id}`);
   };
 
+  const handleSortClick = () => {
+    setSortOrder(prevOrder => prevOrder === 'desc' ? 'asc' : 'desc');
+    const sortedChannels = [...channels].sort((a, b) => {
+      if (sortType === 'posts') {
+        const countA = a.message_count || 0;
+        const countB = b.message_count || 0;
+        return sortOrder === 'desc' ? countB - countA : countA - countB;
+      } else {
+        const dateA = new Date(a.created_at);
+        const dateB = new Date(b.created_at);
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      }
+    });
+    setChannels(sortedChannels);
+  };
+
+  const handleSortTypeChange = (e) => {
+    setSortType(e.target.value);
+    const sortedChannels = [...channels].sort((a, b) => {
+      if (e.target.value === 'posts') {
+        const countA = a.message_count || 0;
+        const countB = b.message_count || 0;
+        return sortOrder === 'desc' ? countB - countA : countA - countB;
+      } else {
+        const dateA = new Date(a.created_at);
+        const dateB = new Date(b.created_at);
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      }
+    });
+    setChannels(sortedChannels);
+  };
+
   return (
     <div className="channels-page">
       <div className="channels-header-bar">
@@ -142,6 +176,22 @@ const Channels = () => {
           <h1>Channels</h1>
         </div>
         <div className="header-right">
+          <div className="sort-container">
+            <select 
+              value={sortType} 
+              onChange={handleSortTypeChange}
+              className="sort-select"
+            >
+              <option value="posts">Posts</option>
+              <option value="date">Date</option>
+            </select>
+            <button 
+              className="sort-btn"
+              onClick={handleSortClick}
+            >
+              Sort {sortOrder === 'desc' ? '↓' : '↑'}
+            </button>
+          </div>
           <button 
             className="new-channel-btn"
             onClick={() => setIsModalOpen(true)}
