@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getChannelById, getMessagesByChannel, createMessage, createReply, voteMessage, voteReply, getMessageVoteStatus, getReplyVoteStatus } from '../services/api';
+import BookmarkButton from '../components/BookmarkButton';
 import '../styles/channelDetail.css';
 
 const ChannelDetail = () => {
@@ -627,6 +628,7 @@ const ChannelDetail = () => {
                   ↓ {message.downvotes || 0}
                 </button>
               </div>
+              <BookmarkButton messageId={message.id} />
               <button 
                 className="reply-btn"
                 onClick={() => handleReplyClick(message)}

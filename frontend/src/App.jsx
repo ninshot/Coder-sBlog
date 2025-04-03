@@ -10,6 +10,7 @@ import ChannelDetail from './pages/ChannelDetail';
 import AdminDashboard from './pages/AdminDashboard';
 import SearchPage from './pages/SearchPage';
 import UserAnalytics from './pages/UserAnalytics';
+import Bookmarks from './pages/Bookmarks';
 import './styles/general.css';
 
 const Navigation = () => {
@@ -20,6 +21,9 @@ const Navigation = () => {
   const isAdmin = user?.isAdmin;
   const isAdminPage = location.pathname === '/admin';
   const isUserAnalyticsPage = location.pathname.includes('/users/') && location.pathname.includes('/analytics');
+  const isBookmarksPage = location.pathname === '/bookmarks';
+  const isChannelsPage = location.pathname === '/channels';
+  const isChannelDetailsPage = location.pathname.includes('/channels/') && !location.pathname.includes('/messages/');
 
   if (isAuthenticated) {
     return (
@@ -31,7 +35,7 @@ const Navigation = () => {
         width: '100%'
       }}>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flex: '1' }}>
-          {location.pathname === '/search' && (
+          {(isBookmarksPage || location.pathname === '/search' || location.pathname.includes('/channels/') || isAdminPage) && (
             <button
               onClick={() => navigate('/channels')}
               style={{
@@ -61,38 +65,7 @@ const Navigation = () => {
               Home
             </button>
           )}
-          {(location.pathname.includes('/channels/') || isAdminPage) && (
-            <Link 
-              to="/channels" 
-              style={{ 
-                textDecoration: 'none',
-                padding: '0.75rem',
-                background: 'black',
-                color: 'white',
-                border: '1px solid black',
-                borderRadius: '4px',
-                fontSize: '1rem',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                fontWeight: '500'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = 'white';
-                e.currentTarget.style.color = 'black';
-                e.currentTarget.style.border = '1px solid black';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'black';
-                e.currentTarget.style.color = 'white';
-                e.currentTarget.style.border = '1px solid black';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              {isAdminPage ? 'Back to Channels' : 'Home'}
-            </Link>
-          )}
-          {isAdmin && !isAdminPage && !isUserAnalyticsPage ? (
+          {isAdmin && !isAdminPage && (
             <Link 
               to="/admin" 
               style={{ 
@@ -122,39 +95,8 @@ const Navigation = () => {
             >
               Admin Dashboard
             </Link>
-          ) : null}
-          {location.pathname.includes('/users/') && location.pathname.includes('/analytics') ? (
-            <Link 
-              to="/channels" 
-              style={{ 
-                textDecoration: 'none',
-                padding: '0.75rem',
-                background: 'black',
-                color: 'white',
-                border: '1px solid black',
-                borderRadius: '4px',
-                fontSize: '1rem',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                fontWeight: '500',
-                marginLeft: '1rem'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = 'white';
-                e.currentTarget.style.color = 'black';
-                e.currentTarget.style.border = '1px solid black';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'black';
-                e.currentTarget.style.color = 'white';
-                e.currentTarget.style.border = '1px solid black';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              Home
-            </Link>
-          ) : (
+          )}
+          {!isUserAnalyticsPage && (
             <Link 
               to={`/users/${user?.id}/analytics`}
               style={{ 
@@ -167,8 +109,7 @@ const Navigation = () => {
                 fontSize: '1rem',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
-                fontWeight: '500',
-                marginLeft: '1rem'
+                fontWeight: '500'
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.background = 'white';
@@ -186,6 +127,37 @@ const Navigation = () => {
               {user?.username}
             </Link>
           )}
+          {(isChannelsPage || isChannelDetailsPage) && !isBookmarksPage && (
+            <Link 
+              to="/bookmarks"
+              style={{ 
+                textDecoration: 'none',
+                padding: '0.75rem',
+                background: 'black',
+                color: 'white',
+                border: '1px solid black',
+                borderRadius: '4px',
+                fontSize: '1rem',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                fontWeight: '500'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'white';
+                e.currentTarget.style.color = 'black';
+                e.currentTarget.style.border = '1px solid black';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'black';
+                e.currentTarget.style.color = 'white';
+                e.currentTarget.style.border = '1px solid black';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              Bookmarks
+            </Link>
+          )}
         </div>
         <div style={{ 
           flex: '1',
@@ -197,7 +169,7 @@ const Navigation = () => {
           Code Connect
         </div>
         <div style={{ display: 'flex', gap: '1rem', flex: '1', justifyContent: 'flex-end' }}>
-          {location.pathname !== '/search' && (
+          {location.pathname !== '/search' && !isBookmarksPage && (
             <button
               onClick={() => navigate('/search')}
               style={{
@@ -342,6 +314,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <UserAnalytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bookmarks"
+              element={
+                <ProtectedRoute>
+                  <Bookmarks />
                 </ProtectedRoute>
               }
             />

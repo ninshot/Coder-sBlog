@@ -62,4 +62,10 @@ export const voteReply = (replyId, voteType) => api.post(`/replies/${replyId}/vo
 export const getMessageVoteStatus = (messageId) => api.get(`/messages/${messageId}/vote-status`);
 export const getReplyVoteStatus = (replyId) => api.get(`/replies/${replyId}/vote-status`);
 
+// Bookmark-related API functions
+export const addBookmark = (messageId) => api.post('/bookmarks', { message_id: messageId });
+export const removeBookmark = (messageId) => api.delete(`/bookmarks/${messageId}`);
+export const getBookmarks = () => api.get('/bookmarks');
+export const checkBookmarkStatus = (messageId) => api.get(`/bookmarks/check/${messageId}`);
+
 export default api; 
