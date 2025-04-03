@@ -58,25 +58,33 @@ const ChannelDetail = () => {
       }
 
       const data = await response.json();
-      console.log('Fetched messages data:', data); // Debug log
+      console.log('Raw messages data:', data); // Debug log
       
       // Process the messages to organize nested replies
       const processedMessages = data.map(message => {
-        if (message.replies && message.replies.length > 0) {
+        if (message.replies) {
+          // Parse the replies JSON string if it's a string
+          const replies = typeof message.replies === 'string' ? JSON.parse(message.replies) : message.replies;
+          
           // Create a map of all replies for quick lookup
           const replyMap = new Map();
-          message.replies.forEach(reply => {
-            replyMap.set(reply.id, { ...reply, replies: [] });
+          replies.forEach(reply => {
+            replyMap.set(reply.id, { ...reply });
           });
 
           // Organize replies into a tree structure
           const organizedReplies = [];
-          message.replies.forEach(reply => {
+          replies.forEach(reply => {
             if (reply.parent_reply_id) {
               // This is a nested reply, find its parent and add it
               const parentReply = replyMap.get(reply.parent_reply_id);
               if (parentReply) {
+                if (!parentReply.replies) {
+                  parentReply.replies = [];
+                }
                 parentReply.replies.push(replyMap.get(reply.id));
+              } else {
+                console.warn(`Parent reply ${reply.parent_reply_id} not found for reply ${reply.id}`);
               }
             } else {
               // This is a top-level reply
@@ -100,6 +108,7 @@ const ChannelDetail = () => {
         return message;
       });
 
+      console.log('Processed messages with organized replies:', processedMessages); // Debug log
       setMessages(processedMessages);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -233,8 +242,10 @@ const ChannelDetail = () => {
         formData.append('image', newReply.image);
       }
 
-      if (parentReplyId) {
-        formData.append('parent_reply_id', parentReplyId);
+      // Set parent_reply_id if replying to a reply
+      if (replyingToReplyId) {
+        formData.append('parent_reply_id', replyingToReplyId);
+        console.log('Setting parent_reply_id to:', replyingToReplyId); // Debug log
       }
 
       const response = await fetch(`http://localhost:8000/api/messages/${messageId}/replies`, {
@@ -260,7 +271,7 @@ const ChannelDetail = () => {
       setParentReplyId(null);
       setReplyingToReplyId(null);
       
-      // Refresh messages
+      // Refresh messages to get updated nested replies structure
       fetchMessages();
     } catch (error) {
       console.error('Error creating reply:', error);
@@ -341,6 +352,62 @@ const ChannelDetail = () => {
       // Show error message for 3 seconds
       setTimeout(() => setError(null), 3000);
     }
+  };
+
+  const NestedReplies = ({ replies, message, user }) => {
+    console.log('Rendering NestedReplies with:', replies); // Debug log
+    
+    if (!replies || replies.length === 0) return null;
+
+    return (
+      <div className="nested-replies-section">
+        {replies.map((nestedReply) => {
+          console.log('Processing nested reply:', nestedReply); // Debug log
+          return (
+            <div key={nestedReply.id} className="nested-reply-item">
+              <div className="nested-reply-user-info">
+                <div className="nested-reply-user-details">
+                  <span className="nested-reply-username">{nestedReply.displayName}</span>
+                  <span className="nested-reply-date">
+                    {new Date(nestedReply.created_at + 'Z').toLocaleString('en-US', { 
+                      timeZone: 'America/Regina',
+                      hour12: true,
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </span>
+                </div>
+                {nestedReply.user_id === user?.id && (
+                  <div className="nested-reply-actions">
+                    <button
+                      className="delete-reply-btn"
+                      onClick={() => handleDeleteReply(nestedReply.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="nested-reply-content">
+                {nestedReply.content}
+                {nestedReply.image_url && (
+                  <div className="reply-image">
+                    <img src={`http://localhost:8000${nestedReply.image_url}`} alt="Reply attachment" />
+                  </div>
+                )}
+              </div>
+              {/* Recursively render nested replies */}
+              {nestedReply.replies && nestedReply.replies.length > 0 && (
+                <NestedReplies replies={nestedReply.replies} message={message} user={user} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   if (!channel) {
@@ -562,98 +629,7 @@ const ChannelDetail = () => {
                       </div>
                     )}
                     {reply.replies && reply.replies.length > 0 && (
-                      <div className="nested-replies-section">
-                        {reply.replies.map((nestedReply) => (
-                          <div key={nestedReply.id} className="nested-reply-item">
-                            <div className="nested-reply-user-info">
-                              <div className="nested-reply-user-details">
-                                <span className="nested-reply-username">{nestedReply.displayName || 'Anonymous'}</span>
-                                <div className="nested-reply-content">{nestedReply.content}</div>
-                              </div>
-                              <div className="nested-reply-actions">
-                                <span className="nested-reply-date">
-                                  {new Date(nestedReply.created_at + 'Z').toLocaleString('en-US', { 
-                                    timeZone: 'America/Regina',
-                                    hour12: true,
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    month: 'short',
-                                    day: 'numeric',
-                                    year: 'numeric'
-                                  })}
-                                </span>
-                                <button 
-                                  onClick={() => handleReplyClick(message, nestedReply.id)}
-                                  className="reply-btn"
-                                >
-                                  Reply
-                                </button>
-                                {(user?.isAdmin || nestedReply.user_id === user?.id) && (
-                                  <button 
-                                    onClick={() => handleDeleteReply(nestedReply.id)}
-                                    className="delete-reply-btn"
-                                  >
-                                    Delete Reply
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                            {nestedReply.image_url && (
-                              <div className="reply-image">
-                                <img src={`http://localhost:8000${nestedReply.image_url}`} alt="Reply attachment" />
-                              </div>
-                            )}
-                            {replyingToReplyId === nestedReply.id && (
-                              <div className="reply-section">
-                                <textarea
-                                  value={newReply.content}
-                                  onChange={(e) => setNewReply({ ...newReply, content: e.target.value })}
-                                  placeholder="Write your reply..."
-                                  className="reply-textarea"
-                                />
-                                <div className="form-group">
-                                  <label htmlFor="replyImage" className="file-input-label">
-                                    Upload Image
-                                    <input
-                                      type="file"
-                                      id="replyImage"
-                                      name="image"
-                                      accept="image/*"
-                                      onChange={(e) => handleImageChange(e, 'reply')}
-                                      className="file-input"
-                                    />
-                                  </label>
-                                  {replyImagePreview && (
-                                    <div className="image-preview">
-                                      <img src={replyImagePreview} alt="Preview" />
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="reply-actions">
-                                  <button 
-                                    className="cancel-reply-btn"
-                                    onClick={() => {
-                                      setReplyingTo(null);
-                                      setReplyingToReplyId(null);
-                                      setParentReplyId(null);
-                                      setNewReply({ content: '', image: null });
-                                      setReplyImagePreview(null);
-                                    }}
-                                  >
-                                    Cancel
-                                  </button>
-                                  <button 
-                                    className="submit-reply-btn"
-                                    onClick={() => handleCreateReply(message.id)}
-                                  >
-                                    Submit
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                      <NestedReplies replies={reply.replies} message={message} user={user} />
                     )}
                   </div>
                 ))}
