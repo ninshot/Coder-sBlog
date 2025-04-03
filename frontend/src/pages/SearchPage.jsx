@@ -7,6 +7,7 @@ const SearchPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortType, setSortType] = useState('most'); // 'most' or 'least'
   const [contentSortType, setContentSortType] = useState('relevance'); // 'relevance', 'upvotes', or 'date'
+  const [userSearchType, setUserSearchType] = useState('name'); // 'name' or 'posts'
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -33,7 +34,11 @@ const SearchPage = () => {
       if (searchType === 'content') {
         url = `http://localhost:8000/api/search?query=${encodeURIComponent(query)}&sort=${contentSortType}`;
       } else if (searchType === 'users') {
-        url = `http://localhost:8000/api/search/user-posts?sort=${sortType}`;
+        if (userSearchType === 'name') {
+          url = `http://localhost:8000/api/search/users?query=${encodeURIComponent(query)}`;
+        } else {
+          url = `http://localhost:8000/api/search/users?sort=${sortType}`;
+        }
       } else if (searchType === 'channels') {
         url = `http://localhost:8000/api/search/channel-posts?sort=${sortType}`;
       }
@@ -50,7 +55,7 @@ const SearchPage = () => {
 
       const data = await response.json();
       setResults(searchType === 'content' ? data : 
-                searchType === 'users' ? data.users : 
+                searchType === 'users' ? data : 
                 data.channels);
     } catch (err) {
       setError(err.message);
@@ -89,6 +94,11 @@ const SearchPage = () => {
 
   const handleSearchTypeChange = (e) => {
     setSearchType(e.target.value);
+    setResults([]);
+  };
+
+  const handleUserSearchTypeChange = (e) => {
+    setUserSearchType(e.target.value);
     setResults([]);
   };
 
@@ -139,8 +149,15 @@ const SearchPage = () => {
               <span className="result-username">@{user.username}</span>
             </div>
             <div className="result-post-count">
-              <strong>{user.totalPosts}</strong> posts
+              <strong>{user.total_posts}</strong> posts
             </div>
+          </div>
+          <div className="result-footer">
+            <span>Joined {new Date(user.created_at).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}</span>
           </div>
         </div>
       ));
@@ -172,7 +189,7 @@ const SearchPage = () => {
   return (
     <div className="search-page">
       <div className="search-header">
-        <h2>Search Messages, Replies, and Users</h2>
+        <h2>Search Messages, Users, and Channels</h2>
       </div>
       <div className="search-container">
         <div className="search-form">
@@ -182,7 +199,7 @@ const SearchPage = () => {
             className="search-type-select"
           >
             <option value="content">Search Content</option>
-            <option value="users">Search Users by Posts</option>
+            <option value="users">Search Users</option>
             <option value="channels">Search Channels by Posts</option>
           </select>
 
@@ -207,6 +224,35 @@ const SearchPage = () => {
                 <option value="date_asc">Sort by Date (Oldest First)</option>
               </select>
             </>
+          ) : searchType === 'users' ? (
+            <>
+              <select
+                value={userSearchType}
+                onChange={handleUserSearchTypeChange}
+                className="search-input"
+              >
+                <option value="name">Search by Display Name</option>
+                <option value="posts">Search by Post Count</option>
+              </select>
+              {userSearchType === 'name' ? (
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search users by display name..."
+                  className="search-input"
+                />
+              ) : (
+                <select
+                  value={sortType}
+                  onChange={handleSortChange}
+                  className="search-input"
+                >
+                  <option value="most">Most Posts</option>
+                  <option value="least">Least Posts</option>
+                </select>
+              )}
+            </>
           ) : (
             <select
               value={sortType}
@@ -217,13 +263,15 @@ const SearchPage = () => {
               <option value="least">Least Posts</option>
             </select>
           )}
-          
-          <button onClick={handleSearch} className="search-button">
+          <button 
+            type="submit" 
+            onClick={handleSearch}
+            className="search-button"
+          >
             Search
           </button>
         </div>
       </div>
-
       <div className="search-results">
         {renderResults()}
       </div>

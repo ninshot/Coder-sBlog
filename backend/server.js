@@ -1771,6 +1771,64 @@ app.get('/api/search/channel-posts', async (req, res) => {
   }
 });
 
+// Search users by display name or post count
+app.get('/api/search/users', checkDatabaseConnection, (req, res) => {
+  const { query, sort } = req.query;
+  
+  // If sort is provided, return users sorted by post count
+  if (sort) {
+    const searchQuery = `
+      SELECT 
+        id,
+        username,
+        displayName,
+        post_count as total_posts,
+        created_at
+      FROM users
+      WHERE post_count > 0
+      ORDER BY post_count ${sort === 'most' ? 'DESC' : 'ASC'}
+      LIMIT 10
+    `;
+    
+    db.query(searchQuery, (err, results) => {
+      if (err) {
+        console.error('Error searching users by post count:', err);
+        return res.status(500).json({ error: err.message });
+      }
+      
+      res.json(results);
+    });
+  } 
+  // If query is provided, search by display name
+  else if (query && query.trim() !== '') {
+    const cleanedQuery = query.trim().replace(/[%_]/g, '\\$&');
+    const searchPattern = `%${cleanedQuery}%`;
+
+    const searchQuery = `
+      SELECT 
+        id,
+        username,
+        displayName,
+        post_count as total_posts,
+        created_at
+      FROM users
+      WHERE displayName LIKE ?
+      ORDER BY displayName ASC
+    `;
+    
+    db.query(searchQuery, [searchPattern], (err, results) => {
+      if (err) {
+        console.error('Error searching users by display name:', err);
+        return res.status(500).json({ error: err.message });
+      }
+      
+      res.json(results);
+    });
+  } else {
+    return res.status(400).json({ message: 'Either search query or sort parameter is required' });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
