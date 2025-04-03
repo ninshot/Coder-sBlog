@@ -35,6 +35,7 @@ const SearchPage = () => {
       }
 
       const data = await response.json();
+      console.log('Search results:', data);
       setResults(data);
     } catch (err) {
       setError('Failed to perform search. Please try again.');
@@ -89,14 +90,28 @@ const SearchPage = () => {
               onClick={() => handleResultClick(result)}
             >
               <div className="result-header">
+                <div className="result-user-info">
+                  <span className="result-display-name">{result.author}</span>
+                  <span className="result-channel-name">Channel: {result.channel_name}</span>
+                </div>
                 <span className="result-type">{result.type}</span>
-                <span className="result-channel">{result.channel_name}</span>
               </div>
               <div className="result-title">{result.title}</div>
               <div className="result-content">{result.content}</div>
               <div className="result-footer">
-                <span>By {result.display_name}</span>
-                <span>{new Date(result.created_at).toLocaleDateString()}</span>
+                <div className="result-votes">
+                  <span className="upvotes">↑ {result.upvotes || 0}</span>
+                  <span className="downvotes">↓ {result.downvotes || 0}</span>
+                </div>
+                <span>{new Date(result.created_at).toLocaleString('en-US', { 
+                  timeZone: 'America/Regina',
+                  hour12: true,
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}</span>
               </div>
             </div>
           ))}

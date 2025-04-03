@@ -112,9 +112,26 @@
   margin-bottom: 0.5rem;
 }
 
+.result-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.result-display-name {
+  font-weight: bold;
+  color: #333;
+}
+
+.result-channel-name {
+  color: grey;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
 .result-type {
   font-weight: bold;
-  color: #007bff;
+  color: black;
 }
 
 .result-channel {
@@ -136,8 +153,25 @@
 .result-footer {
   display: flex;
   justify-content: space-between;
-  color: #888;
+  align-items: center;
+  margin-top: 0.5rem;
+  color: #666;
   font-size: 0.9rem;
+}
+
+.result-votes {
+  display: flex;
+  gap: 1rem;
+}
+
+.upvotes {
+  color: #28a745;
+  font-weight: 500;
+}
+
+.downvotes {
+  color: #dc3545;
+  font-weight: 500;
 }
 
 .no-results {
