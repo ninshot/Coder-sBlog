@@ -147,15 +147,11 @@ CodeConnect/
 - Input validation
 - File upload restrictions
 - Admin-only endpoints protection
-- XSS protection
-- CSRF protection
 
 ## 📱 Responsive Design
 
 The application is fully responsive and works on:
 - Desktop
-- Tablet
-- Mobile devices
 
 ## 🚀 Deployment
 
