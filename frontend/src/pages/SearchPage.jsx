@@ -218,8 +218,8 @@ const SearchPage = () => {
                 className="search-input"
               >
                 <option value="relevance">Sort by Relevance</option>
-                <option value="upvotes">Sort by Upvotes</option>
-                <option value="downvotes">Sort by Downvotes</option>
+                <option value="upvotes">Sort by Downvotes</option>
+                <option value="downvotes">Sort by Upvotes</option>
                 <option value="date_desc">Sort by Date (Newest First)</option>
                 <option value="date_asc">Sort by Date (Oldest First)</option>
               </select>
