@@ -149,10 +149,10 @@ const UserAnalytics = () => {
             <h2>Error Loading Analytics</h2>
             <p>{error}</p>
             <button 
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/channels')}
               className="back-button"
             >
-              ← Back to Admin Dashboard
+              ← Back to Home
             </button>
           </div>
         </div>
@@ -176,10 +176,10 @@ const UserAnalytics = () => {
         <div className="analytics-header">
           <div className="header-left">
             <button 
-              onClick={() => navigate('/admin')}
+              onClick={() => navigate('/channels')}
               className="back-button"
             >
-              ← Back to Admin Dashboard
+              ← Back to Home
             </button>
             <h1 className="analytics-title">User Analytics</h1>
           </div>

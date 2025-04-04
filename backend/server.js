@@ -1789,60 +1789,74 @@ app.get('/api/search/channel-posts', async (req, res) => {
 });
 
 // Search users by display name or post count
-app.get('/api/search/users', checkDatabaseConnection, (req, res) => {
-  const { query, sort } = req.query;
-  
-  // If sort is provided, return users sorted by post count
-  if (sort) {
-    const searchQuery = `
-      SELECT 
-        id,
-        username,
-        displayName,
-        post_count as total_posts,
-        created_at
-      FROM users
-      WHERE post_count > 0
-      ORDER BY post_count ${sort === 'most' ? 'DESC' : 'ASC'}
-      LIMIT 10
-    `;
-    
-    db.query(searchQuery, (err, results) => {
-      if (err) {
-        console.error('Error searching users by post count:', err);
-        return res.status(500).json({ error: err.message });
-      }
-      
-      res.json(results);
-    });
-  } 
-  // If query is provided, search by display name
-  else if (query && query.trim() !== '') {
-    const cleanedQuery = query.trim().replace(/[%_]/g, '\\$&');
-    const searchPattern = `%${cleanedQuery}%`;
+app.get('/api/search/users', authenticateToken, async (req, res) => {
+  try {
+    const connection = await createConnection();
+    const { query, sort = 'most' } = req.query;
 
-    const searchQuery = `
-      SELECT 
-        id,
-        username,
-        displayName,
-        post_count as total_posts,
-        created_at
-      FROM users
-      WHERE displayName LIKE ?
-      ORDER BY displayName ASC
-    `;
-    
-    db.query(searchQuery, [searchPattern], (err, results) => {
-      if (err) {
-        console.error('Error searching users by display name:', err);
-        return res.status(500).json({ error: err.message });
-      }
+    // If no query is provided, search by post count
+    if (!query || query.trim() === '') {
+      const searchQuery = `
+        SELECT 
+          u.id,
+          u.username,
+          u.displayName,
+          (
+            SELECT COUNT(*) FROM messages WHERE user_id = u.id
+          ) + (
+            SELECT COUNT(*) FROM replies WHERE user_id = u.id
+          ) as total_posts,
+          u.created_at
+        FROM users u
+        HAVING total_posts > 0
+        ORDER BY total_posts ${sort === 'most' ? 'DESC' : 'ASC'}
+        LIMIT 10
+      `;
       
-      res.json(results);
-    });
-  } else {
-    return res.status(400).json({ message: 'Either search query or sort parameter is required' });
+      connection.query(searchQuery, (err, results) => {
+        connection.end();
+        if (err) {
+          console.error('Error searching users by post count:', err);
+          return res.status(500).json({ error: err.message });
+        }
+        
+        res.json(results);
+      });
+    } 
+    // If query is provided, search by display name
+    else {
+      const cleanedQuery = query.trim().replace(/[%_]/g, '\\$&');
+      const searchPattern = `%${cleanedQuery}%`;
+
+      const searchQuery = `
+        SELECT 
+          u.id,
+          u.username,
+          u.displayName,
+          (
+            SELECT COUNT(*) FROM messages WHERE user_id = u.id
+          ) + (
+            SELECT COUNT(*) FROM replies WHERE user_id = u.id
+          ) as total_posts,
+          u.created_at
+        FROM users u
+        WHERE u.displayName LIKE ?
+        ORDER BY u.displayName ASC
+      `;
+      
+      connection.query(searchQuery, [searchPattern], (err, results) => {
+        connection.end();
+        if (err) {
+          console.error('Error searching users by display name:', err);
+          return res.status(500).json({ error: err.message });
+        }
+        
+        res.json(results);
+      });
+    }
+  } catch (error) {
+    console.error('Error in user search:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
