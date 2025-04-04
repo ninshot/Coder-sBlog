@@ -213,7 +213,6 @@ const Channels = () => {
               <p className="description">{channel.description}</p>
               <div className="channel-meta">
                 <span>{channel.message_count || 0} messages</span>
-                <span>{channel.member_count || 0} members</span>
               </div>
             </div>
           ))}

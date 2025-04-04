@@ -33,8 +33,6 @@ const UserAnalytics = () => {
     const fetchAnalytics = async () => {
       try {
         const token = localStorage.getItem('token');
-        console.log('Fetching analytics for user:', userId);
-        console.log('Using token:', token ? 'Token exists' : 'No token found');
         
         const response = await fetch(`http://localhost:8000/api/users/${userId}/analytics`, {
           headers: {
@@ -42,19 +40,14 @@ const UserAnalytics = () => {
           },
         });
 
-        console.log('Response status:', response.status);
-        
         if (!response.ok) {
           const errorData = await response.json();
-          console.error('Error response:', errorData);
           throw new Error(errorData.error || 'Failed to fetch analytics');
         }
 
         const data = await response.json();
-        console.log('Analytics data:', data);
         setAnalytics(data);
       } catch (err) {
-        console.error('Error in fetchAnalytics:', err);
         setError(err.message);
       } finally {
         setLoading(false);

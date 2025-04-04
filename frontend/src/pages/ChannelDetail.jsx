@@ -63,7 +63,6 @@ const ChannelDetail = () => {
       }
 
       const data = await response.json();
-      console.log('Raw messages data:', data); // Debug log
       
       // Process the messages to organize nested replies
       const processedMessages = data.map(message => {
@@ -113,7 +112,6 @@ const ChannelDetail = () => {
         return message;
       });
 
-      console.log('Processed messages with organized replies:', processedMessages); // Debug log
       setMessages(processedMessages);
 
       // Initialize vote status for messages and replies
@@ -177,24 +175,17 @@ const ChannelDetail = () => {
         return;
       }
 
-      console.log('Selected file:', file);
-      console.log('File size:', file.size);
-      console.log('File type:', file.type);
-
       setError(null);
       
       // Create a preview URL
       const reader = new FileReader();
       reader.onload = (event) => {
-        console.log('FileReader loaded successfully');
         if (type === 'message') {
           setNewMessage(prev => ({ ...prev, image: file }));
           setMessageImagePreview(event.target.result);
-          console.log('Message preview set:', event.target.result);
         } else {
           setNewReply(prev => ({ ...prev, image: file }));
           setReplyImagePreview(event.target.result);
-          console.log('Reply preview set:', event.target.result);
         }
       };
       
@@ -241,7 +232,6 @@ const ChannelDetail = () => {
       }
 
       const data = await response.json();
-      console.log('Message created:', data);
       
       // Reset form
       setNewMessage({ title: '', content: '', image: null });
@@ -277,7 +267,6 @@ const ChannelDetail = () => {
       // Set parent_reply_id if replying to a reply
       if (replyingToReplyId) {
         formData.append('parent_reply_id', replyingToReplyId);
-        console.log('Setting parent_reply_id to:', replyingToReplyId); // Debug log
       }
 
       const response = await fetch(`http://localhost:8000/api/messages/${messageId}/replies`, {
@@ -294,7 +283,6 @@ const ChannelDetail = () => {
       }
 
       const data = await response.json();
-      console.log('Reply created with data:', data);
       
       // Reset reply form and state
       setNewReply({ content: '', image: null });
@@ -425,14 +413,11 @@ const ChannelDetail = () => {
   };
 
   const NestedReplies = ({ replies, message, user }) => {
-    console.log('Rendering NestedReplies with:', replies); // Debug log
-    
     if (!replies || replies.length === 0) return null;
 
     return (
       <div className="nested-replies-section">
         {replies.map((nestedReply) => {
-          console.log('Processing nested reply:', nestedReply); // Debug log
           return (
             <div key={nestedReply.id} className="nested-reply-item">
               <div className="nested-reply-user-info">

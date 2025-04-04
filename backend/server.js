@@ -36,13 +36,11 @@ const storage = multer.diskStorage({
     }
     // Set directory permissions
     fs.chmodSync(uploadDir, '777');
-    console.log('Upload directory:', uploadDir);
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const filename = uniqueSuffix + path.extname(file.originalname);
-    console.log('Generated filename:', filename);
     cb(null, filename);
   }
 });
@@ -502,32 +500,23 @@ const checkDatabaseConnection = (req, res, next) => {
 // Middleware to authenticate JWT tokens
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
-  console.log('Auth Header:', authHeader);
-  
   const token = authHeader?.split(' ')[1];
-  console.log('Extracted Token:', token);
-  console.log('JWT_SECRET:', JWT_SECRET);
   
   if (!token) {
-    console.log('No token provided');
     return res.status(401).json({ error: 'No token provided' });
   }
   
   // First try to verify as JWT token
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      console.log('JWT verification failed:', err);
       // If JWT verification fails, check if it's the direct secret key
       if (token === JWT_SECRET) {
-        console.log('Token validated as direct secret key');
         req.user = { id: 1, isAdmin: true }; // Default admin user for direct secret key
         next();
       } else {
-        console.log('Token mismatch with secret key');
         return res.status(403).json({ error: 'Invalid token' });
       }
     } else {
-      console.log('Token verified successfully as JWT');
       req.user = user;
       next();
     }
@@ -601,44 +590,33 @@ app.post('/api/channels/:channelId/join', authenticateToken, async (req, res) =>
     const userId = req.user.id;
 
     // Check if user is already a member
-    connection.query(
+    const [existingMembers] = await connection.promise().query(
       'SELECT * FROM channel_members WHERE channel_id = ? AND user_id = ?',
-      [channelId, userId],
-      async (err, results) => {
-        if (err) {
-          connection.end();
-          console.error('Error checking channel membership:', err);
-          return res.status(500).json({ error: 'Error checking channel membership' });
-        }
-
-        if (results.length > 0) {
-          connection.end();
-          return res.status(400).json({ error: 'User is already a member of this channel' });
-        }
-
-        // Add user to channel
-        connection.query(
-          'INSERT INTO channel_members (channel_id, user_id) VALUES (?, ?)',
-          [channelId, userId],
-          async (err) => {
-            if (err) {
-              connection.end();
-              console.error('Error joining channel:', err);
-              return res.status(500).json({ error: 'Error joining channel' });
-            }
-
-            // Update member count
-            await updateChannelMemberCount(connection, channelId);
-            connection.end();
-            
-            res.json({ message: 'Successfully joined channel' });
-          }
-        );
-      }
+      [channelId, userId]
     );
+
+    if (existingMembers.length > 0) {
+      connection.end();
+      return res.status(400).json({ message: 'User is already a member of this channel' });
+    }
+
+    // Add user to channel
+    await connection.promise().query(
+      'INSERT INTO channel_members (channel_id, user_id) VALUES (?, ?)',
+      [channelId, userId]
+    );
+
+    // Update member count
+    await connection.promise().query(
+      'UPDATE channels SET member_count = member_count + 1 WHERE id = ?',
+      [channelId]
+    );
+
+    connection.end();
+    res.status(201).json({ message: 'Successfully joined channel' });
   } catch (error) {
-    console.error('Error in channel join:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error joining channel:', error);
+    res.status(500).json({ error: 'Failed to join channel' });
   }
 });
 
@@ -649,27 +627,34 @@ app.post('/api/channels/:channelId/leave', authenticateToken, async (req, res) =
     const channelId = req.params.channelId;
     const userId = req.user.id;
 
-    // Remove user from channel
-    connection.query(
-      'DELETE FROM channel_members WHERE channel_id = ? AND user_id = ?',
-      [channelId, userId],
-      async (err) => {
-        if (err) {
-          connection.end();
-          console.error('Error leaving channel:', err);
-          return res.status(500).json({ error: 'Error leaving channel' });
-        }
-
-        // Update member count
-        await updateChannelMemberCount(connection, channelId);
-        connection.end();
-        
-        res.json({ message: 'Successfully left channel' });
-      }
+    // Check if user is a member
+    const [existingMembers] = await connection.promise().query(
+      'SELECT * FROM channel_members WHERE channel_id = ? AND user_id = ?',
+      [channelId, userId]
     );
+
+    if (existingMembers.length === 0) {
+      connection.end();
+      return res.status(400).json({ message: 'User is not a member of this channel' });
+    }
+
+    // Remove user from channel
+    await connection.promise().query(
+      'DELETE FROM channel_members WHERE channel_id = ? AND user_id = ?',
+      [channelId, userId]
+    );
+
+    // Update member count
+    await connection.promise().query(
+      'UPDATE channels SET member_count = member_count - 1 WHERE id = ?',
+      [channelId]
+    );
+
+    connection.end();
+    res.json({ message: 'Successfully left channel' });
   } catch (error) {
-    console.error('Error in channel leave:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error leaving channel:', error);
+    res.status(500).json({ error: 'Failed to leave channel' });
   }
 });
 
@@ -679,27 +664,18 @@ app.get('/api/channels/:channelId/members', authenticateToken, async (req, res) 
     const connection = await createConnection();
     const channelId = req.params.channelId;
 
-    const query = `
-      SELECT u.id, u.username, u.displayName, cm.joined_at
-      FROM channel_members cm
-      JOIN users u ON cm.user_id = u.id
+    const [members] = await connection.promise().query(`
+      SELECT u.id, u.username, u.displayName, u.isAdmin
+      FROM users u
+      JOIN channel_members cm ON u.id = cm.user_id
       WHERE cm.channel_id = ?
-      ORDER BY cm.joined_at DESC
-    `;
+    `, [channelId]);
 
-    connection.query(query, [channelId], (err, results) => {
-      connection.end();
-      
-      if (err) {
-        console.error('Error fetching channel members:', err);
-        return res.status(500).json({ error: 'Error fetching channel members' });
-      }
-
-      res.json({ members: results });
-    });
+    connection.end();
+    res.json(members);
   } catch (error) {
-    console.error('Error in fetching channel members:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error fetching channel members:', error);
+    res.status(500).json({ error: 'Failed to fetch channel members' });
   }
 });
 
@@ -710,32 +686,14 @@ app.post('/api/channels/:channelId/messages', authenticateToken, upload.single('
   const { title, content, user_id, displayName } = req.body;
   let imageUrl = null;
 
-  console.log('Received message creation request:', {
-    channelId,
-    title,
-    content,
-    user_id,
-    displayName,
-    hasFile: !!req.file,
-    fileDetails: req.file
-  });
-
   if (req.file) {
     imageUrl = `/uploads/${req.file.filename}`;
-    console.log('File uploaded successfully:', {
-      filename: req.file.filename,
-      path: req.file.path,
-      size: req.file.size,
-      mimetype: req.file.mimetype,
-      imageUrl
-    });
   }
 
   const query = 'INSERT INTO messages (channel_id, user_id, displayName, title, content, image_url) VALUES (?, ?, ?, ?, ?, ?)';
   
   db.query(query, [channelId, user_id, displayName, title, content, imageUrl], (err, results) => {
     if (err) {
-      console.error('Error creating message:', err);
       res.status(500).json({ error: err.message });
       return;
     }
@@ -750,12 +708,10 @@ app.post('/api/channels/:channelId/messages', authenticateToken, upload.single('
     
     db.query(getMessageQuery, [results.insertId], (err, messageResults) => {
       if (err) {
-        console.error('Error fetching created message:', err);
         res.status(500).json({ error: err.message });
         return;
       }
       
-      console.log('Created message:', messageResults[0]);
       res.status(201).json(messageResults[0]);
     });
   });
@@ -1518,7 +1474,6 @@ app.get('/api/replies/:replyId/vote-status', authenticateToken, (req, res) => {
   });
 });
 
-// Like/Dislike Routes
 // Like a message
 app.post('/api/messages/:messageId/like', authenticateToken, (req, res) => {
   const { messageId } = req.params;
